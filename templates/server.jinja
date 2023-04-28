@@ -1,0 +1,8 @@
+server {
+  listen       80;
+  {% if let Some(domain) = domain %}server_name  {{ domain }};{% endif %}
+
+  {% for location in locations %}
+    {{ location }}
+  {% endfor %}
+}
