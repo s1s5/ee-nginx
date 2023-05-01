@@ -8,5 +8,6 @@ edition = "2021"
 [dependencies]
 askama = "0.12.0"
 base64 = "0.21.0"
+clap = { version = "4.2.5", features = ["derive"] }
 openssl = "0.10.52"
 url = "2.3.1"
