@@ -7,8 +7,9 @@ use url::Url;
 
 use crate::{
     error::CustomError,
+    templates::{Location, Server},
     utils::{exclude_path_and_query_param, get_basic_auth_file_path, get_domain},
-    CacheType, Location, ParsedResult, Server,
+    CacheType, ParsedResult,
 };
 
 fn parse_cache_type(query: &str) -> CacheType {
@@ -96,6 +97,8 @@ pub fn parse(target_dir: &Path, env_var: &str) -> Result<ParsedResult, CustomErr
 
 #[cfg(test)]
 mod tests {
+    use crate::templates::Location;
+
     use super::*;
 
     #[test]
