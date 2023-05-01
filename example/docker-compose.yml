@@ -1,0 +1,25 @@
+version: '3'
+
+services:
+  nginx:
+    build:
+      context: ..
+    environment:
+      NGINX_CONF: |
+        / > /mnt/root/
+        /app/ > http://app:8000/
+        /static > /mnt/static/?versioned
+        http://user:password@*/secret > /mnt/secret/
+        http://hoge.localhost/ > /mnt/hoge/
+        http://hoge.localhost/static > /mnt/static/?must-revalidate
+    volumes:
+      - ./mnt:/mnt
+    ports:
+      - 8890:80
+
+  app:
+    image: python:3
+    command: ["python", "-m", "http.server"]
+    volumes:
+      - ./mnt:/mnt
+    working_dir: /mnt/app
