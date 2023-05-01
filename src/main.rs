@@ -1,5 +1,5 @@
 use clap::Parser;
-use env_parser::{output, parse};
+use ee_nginx::{output, parse};
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]

@@ -1,5 +1,5 @@
 # つくるアプリによってここの名称を変更すること
-ARG APP_NAME="env-parser"
+ARG APP_NAME="ee-nginx"
 
 # ------------- build ----------------
 # FROM ekidd/rust-musl-builder:stable as builder
