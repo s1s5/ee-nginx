@@ -5,7 +5,7 @@ use std::path::PathBuf;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    #[arg(short)]
+    #[arg(short, long)]
     conf_str: Option<String>,
 
     #[arg(short, long, default_value = "NGINX_CONF")]

@@ -106,7 +106,7 @@ mod tests {
         let target_dir = PathBuf::from("/etc/nginx/conf.d");
         for (conf_str, expected) in [
             (
-                "/>/var/www/html?must-revalidate",
+                "/>/var/www/html/?must-revalidate",
                 ParsedResult {
                     target_dir: target_dir.clone(),
                     basic_auth_map: HashSet::new(),
@@ -117,7 +117,7 @@ mod tests {
                             locations: vec![Location {
                                 location: "/".to_string(),
                                 domain: None,
-                                alias: "/var/www/html".to_string(),
+                                alias: "/var/www/html/".to_string(),
                                 fallback: false,
                                 basic_auth: None,
                                 cache_type: CacheType::MustRevalidate,
@@ -195,7 +195,7 @@ mod tests {
                 },
             ),
             (
-                "http://user:password@*/secret>/var/www/html/secret/;http://user:password@foo.localhost>/var/www/html/foo/",
+                "http://user:password@*/secret/>/var/www/html/secret/;http://user:password@foo.localhost>/var/www/html/foo/",
                 ParsedResult {
                     target_dir: target_dir.clone(),
                     basic_auth_map: HashSet::from_iter([("user".to_string(),"password".to_string())]),
@@ -205,7 +205,7 @@ mod tests {
                             Server {
                                 domain: None,
                                 locations: vec![Location {
-                                    location: "/secret".to_string(),
+                                    location: "/secret/".to_string(),
                                     domain: None,
                                     alias: "/var/www/html/secret/".to_string(),
                                     fallback: false,
