@@ -2,6 +2,7 @@ use std::{io::Write, path::Path};
 
 use askama::Template;
 use base64::{engine::general_purpose, Engine};
+use log::debug;
 use openssl::hash::{Hasher, MessageDigest};
 
 use crate::{error::CustomError, utils::get_basic_auth_file_path, ParsedResult};
@@ -21,6 +22,9 @@ fn write_to_file(dst_path: &Path, content: &str) -> Result<(), CustomError> {
         println!("----- {} -----", &dst_path.to_str().unwrap()[2..]);
         println!("{}", content);
     } else {
+        debug!("// ---------- {:?} ----------", dst_path);
+        debug!("{}", content);
+
         let mut file = std::fs::File::create(&dst_path).map_err(|e| {
             CustomError::new(format!("failed to crete file. {:?}, {:?}", dst_path, e))
         })?;

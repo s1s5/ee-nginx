@@ -3,6 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use log::debug;
 use url::Url;
 
 use crate::{
@@ -42,6 +43,8 @@ pub fn parse(target_dir: &Path, env_var: &str) -> Result<ParsedResult, CustomErr
         if s.len() != 2 {
             return Err(CustomError::new("must include one '>'"));
         }
+
+        debug!("loading config: {} > {}", s[0], s[1]);
 
         let s0 = parser.parse(s[0]).map_err(|e| {
             CustomError::new(format!(

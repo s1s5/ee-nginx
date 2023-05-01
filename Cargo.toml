@@ -9,5 +9,7 @@ edition = "2021"
 askama = "0.12.0"
 base64 = "0.21.0"
 clap = { version = "4.2.5", features = ["derive"] }
+env_logger = "0.10.0"
+log = "0.4.17"
 openssl = "0.10.52"
 url = "2.3.1"
