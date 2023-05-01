@@ -26,11 +26,19 @@ pub fn parse(target_dir: &Path, env_var: &str) -> Result<ParsedResult, CustomErr
     let api = Url::parse("file://*").unwrap();
     let parser = Url::options().base_url(Some(&api));
 
-    let configs: Vec<&str> = env_var.split(|c| c == '\n' || c == ';').collect();
+    let configs: Vec<&str> = env_var
+        .split(|c| c == '\n' || c == ';')
+        .map(|x| x.trim())
+        .filter(|x| x.len() > 0)
+        .collect();
     let mut basic_auth_map: HashSet<(String, String)> = HashSet::new();
     let mut server_map: HashMap<String, Server> = HashMap::new();
     for conf in configs {
-        let s: Vec<&str> = conf.split(|c| c == '>').collect();
+        let s: Vec<&str> = conf
+            .split(|c| c == '>')
+            .map(|x| x.trim())
+            .filter(|x| x.len() > 0)
+            .collect();
         if s.len() != 2 {
             return Err(CustomError::new("must include one '>'"));
         }
@@ -127,7 +135,64 @@ mod tests {
                 },
             ),
             (
+                r#"
+                /hello/ > /var/www/html/foo/
+                "#,
+                ParsedResult {
+                    target_dir: target_dir.clone(),
+                    basic_auth_map: HashSet::new(),
+                    server_map: HashMap::from_iter([(
+                        "*".to_string(),
+                        Server {
+                            domain: None,
+                            locations: vec![Location {
+                                location: "/hello/".to_string(),
+                                domain: None,
+                                alias: "/var/www/html/foo/".to_string(),
+                                fallback: false,
+                                basic_auth: None,
+                                cache_type: CacheType::None,
+                            }],
+                        },
+                    )]),
+                },
+            ),
+            (
                 "/static>/var/www/html/;/>http://app:8000/",
+                ParsedResult {
+                    target_dir: target_dir.clone(),
+                    basic_auth_map: HashSet::new(),
+                    server_map: HashMap::from_iter([(
+                        "*".to_string(),
+                        Server {
+                            domain: None,
+                            locations: vec![
+                                Location {
+                                    location: "/static".to_string(),
+                                    domain: None,
+                                    alias: "/var/www/html/".to_string(),
+                                    fallback: false,
+                                    basic_auth: None,
+                                    cache_type: CacheType::None,
+                                },
+                                Location {
+                                    location: "/".to_string(),
+                                    domain: Some("http://app:8000".to_string()),
+                                    alias: "/".to_string(),
+                                    fallback: false,
+                                    basic_auth: None,
+                                    cache_type: CacheType::None,
+                                },
+                            ],
+                        },
+                    )]),
+                },
+            ),
+            (
+                r#"
+                /static > /var/www/html/
+                /       > http://app:8000/
+                "#,
                 ParsedResult {
                     target_dir: target_dir.clone(),
                     basic_auth_map: HashSet::new(),

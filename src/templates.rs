@@ -19,3 +19,124 @@ pub struct Server {
     pub domain: Option<String>,
     pub locations: Vec<Location>,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_location_0() {
+        assert_eq!(
+            Location {
+                location: "/".to_string(),
+                domain: None,
+                alias: "/var/www/html/".to_string(),
+                fallback: false,
+                basic_auth: None,
+                cache_type: CacheType::None,
+            }
+            .render()
+            .expect("failed to render location"),
+            r#"  location / {
+    alias /var/www/html/;
+    index index.html index.htm;
+    add_header Cache-Control "no-store";
+  }"#
+        );
+    }
+
+    #[test]
+    fn test_location_1() {
+        assert_eq!(
+            Location {
+                location: "/".to_string(),
+                domain: None,
+                alias: "/var/www/html/".to_string(),
+                fallback: false,
+                basic_auth: None,
+                cache_type: CacheType::MustRevalidate,
+            }
+            .render()
+            .expect("failed to render location"),
+            r#"  location / {
+    alias /var/www/html/;
+    index index.html index.htm;
+    add_header Cache-Control "no-cache";
+  }"#
+        );
+    }
+
+    #[test]
+    fn test_location_2() {
+        assert_eq!(
+            Location {
+                location: "/".to_string(),
+                domain: Some("http://app:8000".to_string()),
+                alias: "/".to_string(),
+                fallback: true,
+                basic_auth: None,
+                cache_type: CacheType::None,
+            }
+            .render()
+            .expect("failed to render location"),
+            r#"  location / {
+    proxy_pass http://app:8000/;
+    try_files $uri $uri/ / =404;
+  }"#
+        );
+    }
+
+    #[test]
+    fn test_location_3() {
+        assert_eq!(
+            Location {
+                location: "/".to_string(),
+                domain: None,
+                alias: "/var/www/html/".to_string(),
+                fallback: false,
+                basic_auth: Some("/etc/nginx/conf.d/htpasswd".to_string()),
+                cache_type: CacheType::None,
+            }
+            .render()
+            .expect("failed to render location"),
+            r#"  location / {
+    alias /var/www/html/;
+    index index.html index.htm;
+    add_header Cache-Control "no-store";
+    auth_basic "Authorization required";
+    auth_basic_user_file /etc/nginx/conf.d/htpasswd;
+  }"#
+        );
+    }
+
+    #[test]
+    fn test_server_0() {
+        assert_eq!(
+            Server {
+                domain: None,
+                locations: vec![]
+            }
+            .render()
+            .expect("failed to render location"),
+            r#"server {
+  listen 80;
+}"#
+        );
+    }
+
+    #[test]
+    fn test_server_1() {
+        assert_eq!(
+            Server {
+                domain: Some("foo.localhost".to_string()),
+                locations: vec![]
+            }
+            .render()
+            .expect("failed to render location"),
+            r#"server {
+  listen 80;
+  server_name foo.localhost;
+}"#
+        );
+    }
+}

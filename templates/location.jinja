@@ -5,9 +5,7 @@
 {% match cache_type %}{% when CacheType::MustRevalidate %}    add_header Cache-Control "no-cache";
 {% when CacheType::Versioned %}    add_header Cache-Control "public, max-age=31536000";
 {% when CacheType::None %}    add_header Cache-Control "no-store";
-{% endmatch %}{% endif %}{% if fallback %}
-    try_files $uri $uri/ / =404;
-{% endif %}{% if let Some(basic_auth) = basic_auth %}
-    auth_basic "Authorization required";
+{% endmatch %}{% endif %}{% if fallback %}    try_files $uri $uri/ / =404;
+{% endif %}{% if let Some(basic_auth) = basic_auth %}    auth_basic "Authorization required";
     auth_basic_user_file {{ basic_auth }};
 {% endif %}  {{ "}" }}
