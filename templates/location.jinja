@@ -1,5 +1,7 @@
   location {{ location }} {{ "{" }}
     {% if let Some(domain) = domain %}proxy_pass {{ domain }}{{ alias }};
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
 {% else %}alias {{ alias }};
     index index.html index.htm;
 {% match cache_type %}{% when CacheType::MustRevalidate %}    add_header Cache-Control "no-cache";
