@@ -1,5 +1,5 @@
 server {{ "{" }}
-  listen 80;
+  listen {% if let Some(port) = port %}{{ port }}{% else %}80{% endif %};
 {% if let Some(domain) = domain %}  server_name {{ domain }};
 {% endif %}{% for location in locations %}{{ location|safe }}
 {% endfor %}{{ "}" }}

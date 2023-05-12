@@ -17,6 +17,7 @@ pub struct Location {
 #[template(path = "server.jinja")]
 pub struct Server {
     pub domain: Option<String>,
+    pub port: Option<u16>,
     pub locations: Vec<Location>,
 }
 
@@ -116,12 +117,13 @@ mod tests {
         assert_eq!(
             Server {
                 domain: None,
+                port: Some(99),
                 locations: vec![]
             }
             .render()
             .expect("failed to render location"),
             r#"server {
-  listen 80;
+  listen 99;
 }"#
         );
     }
@@ -131,6 +133,7 @@ mod tests {
         assert_eq!(
             Server {
                 domain: Some("foo.localhost".to_string()),
+                port: None,
                 locations: vec![]
             }
             .render()

@@ -95,6 +95,7 @@ pub fn parse(target_dir: &Path, env_var: &str) -> Result<ParsedResult, CustomErr
                     domain.to_string(),
                     Server {
                         domain: get_domain(Some(domain)),
+                        port: s0.port(),
                         locations: vec![loc],
                     },
                 );
@@ -128,6 +129,7 @@ mod tests {
                         "*".to_string(),
                         Server {
                             domain: None,
+                            port: None,
                             locations: vec![Location {
                                 location: "/".to_string(),
                                 domain: None,
@@ -151,6 +153,7 @@ mod tests {
                         "*".to_string(),
                         Server {
                             domain: None,
+                            port: None,
                             locations: vec![Location {
                                 location: "/hello/".to_string(),
                                 domain: None,
@@ -172,6 +175,7 @@ mod tests {
                         "*".to_string(),
                         Server {
                             domain: None,
+                            port: None,
                             locations: vec![
                                 Location {
                                     location: "/static".to_string(),
@@ -206,6 +210,7 @@ mod tests {
                         "*".to_string(),
                         Server {
                             domain: None,
+                            port: None,
                             locations: vec![
                                 Location {
                                     location: "/static".to_string(),
@@ -229,7 +234,7 @@ mod tests {
                 },
             ),
             (
-                "http://hoge.localhost>/var/www/html/hoge/;http://foo.localhost>/var/www/html/foo/",
+                "http://hoge.localhost:3333>/var/www/html/hoge/;http://foo.localhost>/var/www/html/foo/",
                 ParsedResult {
                     target_dir: target_dir.clone(),
                     basic_auth_map: HashSet::new(),
@@ -238,6 +243,7 @@ mod tests {
                             "hoge.localhost".to_string(),
                             Server {
                                 domain: Some("hoge.localhost".to_string()),
+                                port: Some(3333),
                                 locations: vec![Location {
                                     location: "/".to_string(),
                                     domain: None,
@@ -252,6 +258,7 @@ mod tests {
                             "foo.localhost".to_string(),
                             Server {
                                 domain: Some("foo.localhost".to_string()),
+                                port: None,
                                 locations: vec![Location {
                                     location: "/".to_string(),
                                     domain: None,
@@ -275,6 +282,7 @@ mod tests {
                             "*".to_string(),
                             Server {
                                 domain: None,
+                                port: None,
                                 locations: vec![Location {
                                     location: "/secret/".to_string(),
                                     domain: None,
@@ -289,6 +297,7 @@ mod tests {
                             "foo.localhost".to_string(),
                             Server {
                                 domain: Some("foo.localhost".to_string()),
+                                port: None,
                                 locations: vec![Location {
                                     location: "/".to_string(),
                                     domain: None,
