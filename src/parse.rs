@@ -41,7 +41,10 @@ pub fn parse(target_dir: &Path, env_var: &str) -> Result<ParsedResult, CustomErr
             .filter(|x| x.len() > 0)
             .collect();
         if s.len() != 2 {
-            return Err(CustomError::new("must include one '>'"));
+            return Err(CustomError::new(format!(
+                "must include one '>'. '{}'",
+                conf
+            )));
         }
 
         debug!("loading config: {} > {}", s[0], s[1]);
