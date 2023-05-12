@@ -58,3 +58,12 @@ none -> no-cache
 http://user:password@*/secret > /mnt/secret/
 ```
 It must start with `http://`. and use '*' for default domain.
+
+- for SPA
+```
+/ > /?fallback
+```
+will contains following settings
+```
+try_files $uri $uri/ / =404;
+```
