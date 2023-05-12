@@ -35,11 +35,13 @@ COPY --from=builder /home/rust/target/x86_64-unknown-linux-musl/release/$APP_NAM
 
 ENV RUST_LOG info
 ENV NGINX_CONF "/>/usr/share/nginx/html/"
+ENV NGINX_CONF_FILE ""
 
 WORKDIR /
 RUN echo $'#!bin/sh\n\
-    /app/generator\n\
-    /docker-entrypoint.sh "$@"' > /entrypoint.sh
+    if [ $NGINX_CONF_FILE"" = "" ]; then /app/generator; \n\
+    else /app/generator --conf-file $NGINX_CONF_FILE; fi\n\
+    exec /docker-entrypoint.sh "$@"' > /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 ENTRYPOINT [ "/entrypoint.sh" ]
