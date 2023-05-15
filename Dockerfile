@@ -3,7 +3,7 @@ ARG APP_NAME="ee-nginx"
 
 # ------------- build ----------------
 # FROM ekidd/rust-musl-builder:stable as builder
-FROM clux/muslrust:1.67.1 as builder
+FROM --platform=$BUILDPLATFORM clux/muslrust:1.67.1 as builder
 
 RUN mkdir -p /home/rust/src
 WORKDIR /home/rust
@@ -26,7 +26,7 @@ COPY ./templates/ ./templates/
 RUN cargo build --release --bin ${APP_NAME}
 
 # ------------- runtime ----------------
-FROM nginx:1.23.4-alpine
+FROM --platform=$BUILDPLATFORM nginx:1.23.4-alpine
 
 ARG APP_NAME
 
