@@ -273,7 +273,7 @@ mod tests {
                 },
             ),
             (
-                "http://user:password@*/secret/>/var/www/html/secret/;http://user:password@foo.localhost>/var/www/html/foo/",
+                "http://user:password@*:8888/secret/>/var/www/html/secret/;http://user:password@foo.localhost>/var/www/html/foo/",
                 ParsedResult {
                     target_dir: target_dir.clone(),
                     basic_auth_map: HashSet::from_iter([("user".to_string(),"password".to_string())]),
@@ -282,7 +282,7 @@ mod tests {
                             "*".to_string(),
                             Server {
                                 domain: None,
-                                port: None,
+                                port: Some(8888),
                                 locations: vec![Location {
                                     location: "/secret/".to_string(),
                                     domain: None,
