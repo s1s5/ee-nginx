@@ -38,14 +38,6 @@ $ docker compose up --build
 ```
 It must start with a '/' and usually needs a trailing '/' almost every time.
 
-- reverse proxy
-```
-/app/ > http://app:8000/
-```
-> In case `http://app:8000/` :  `/app/foo/bar` -> `http://app:8000/foo/bar`
->
-> In case `http://app:8000` :  `/app/foo/bar` -> `http://app:8000/app/foo/bar`
-
 - cache control
 ```
 none -> no-cache
