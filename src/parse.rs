@@ -35,7 +35,10 @@ pub fn parse<'a>(
     let parser = Url::options().base_url(Some(&api));
 
     let configs: Vec<&str> = env_var
-        .split(|c| c == '\n' || c == ';')
+        .split(|c| c == '\n')
+        .map(|x| x.trim())
+        .filter(|x| !x.starts_with("#"))
+        .flat_map(|l| l.split(|c| c == ';'))
         .map(|x| x.trim())
         .filter(|x| x.len() > 0)
         .collect();
@@ -241,7 +244,9 @@ mod tests {
             ),
             (
                 r#"
+                # static files location
                 /static > /var/www/html/
+                # app reverse proxy
                 /       > http://app:8000/
                 "#,
                 ParsedResult {
