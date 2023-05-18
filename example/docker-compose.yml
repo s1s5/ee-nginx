@@ -5,6 +5,7 @@ services:
     build:
       context: ..
     environment:
+      RUST_LOG: debug
       NGINX_CONF: |
         / > /mnt/root/
         /app/ > http://app:8000/

@@ -2,7 +2,7 @@
 ARG APP_NAME="ee-nginx"
 
 # ------------- build ----------------
-FROM messense/rust-musl-cross:x86_64-musl as builder
+FROM --platform=$BUILDPLATFORM s1s5/musl:${TARGETARCH} as builder
 
 RUN mkdir -p /home/rust/src
 WORKDIR /home/rust
