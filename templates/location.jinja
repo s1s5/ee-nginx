@@ -1,6 +1,11 @@
   location {{ location }} {{ "{" }}
-    {% if let Some(domain) = domain %}proxy_pass {{ domain }}{{ alias }};
-    proxy_set_header Host $host;
+    {% if let Some(domain) = domain %}{% if config.docker_mode %}resolver 127.0.0.11 valid=2s ipv6=off;
+    set $target "{{ domain }}{{ alias }}";
+    rewrite {{ location }}(.*) /$1 break;
+    {% if alias.ends_with("/") %}proxy_pass $target$1$is_args$args;
+    {% else %}proxy_pass $target{{ location }}$1$is_args$args;
+    {% endif %}{% else %}proxy_pass {{ domain }}{{ alias }};
+    {% endif %}proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
 {% else %}alias {{ alias }};
     index index.html index.htm;

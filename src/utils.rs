@@ -13,16 +13,24 @@ pub fn get_domain(domain: Option<&str>) -> Option<String> {
     }
 }
 
-pub fn exclude_path_and_query_param(uri: &Url) -> Option<String> {
-    let domain = uri.domain().unwrap();
-    if domain == "*" {
-        None
-    } else {
-        let mut uri = uri.clone();
-        uri.set_path("");
-        uri.set_query(None);
+pub fn get_scheme_and_domain_from_uri(uri: &Url) -> Option<String> {
+    if let Some(domain) = uri.domain() {
+        if domain == "*" {
+            return None;
+        }
+    }
+    let mut uri = uri.clone();
+    uri.set_path("");
+    uri.set_query(None);
 
-        Some(uri.to_string().trim_end_matches("/").to_string())
+    Some(uri.to_string().trim_end_matches("/").to_string())
+}
+
+pub fn force_append_trailing_slash(path: &str) -> String {
+    if path.ends_with("/") {
+        path.to_string()
+    } else {
+        format!("{}/", path)
     }
 }
 

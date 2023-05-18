@@ -8,8 +8,11 @@ use url::Url;
 
 use crate::{
     error::CustomError,
-    templates::{Location, Server},
-    utils::{exclude_path_and_query_param, get_basic_auth_file_path, get_domain},
+    templates::{Config, Location, Server},
+    utils::{
+        force_append_trailing_slash, get_basic_auth_file_path, get_domain,
+        get_scheme_and_domain_from_uri,
+    },
     CacheType, ParsedResult,
 };
 
@@ -23,7 +26,11 @@ fn parse_cache_type(query: &str) -> CacheType {
     }
 }
 
-pub fn parse(target_dir: &Path, env_var: &str) -> Result<ParsedResult, CustomError> {
+pub fn parse<'a>(
+    target_dir: &Path,
+    env_var: &str,
+    config: &'a Config,
+) -> Result<ParsedResult<'a>, CustomError> {
     let api = Url::parse("file://*").unwrap();
     let parser = Url::options().base_url(Some(&api));
 
@@ -60,8 +67,6 @@ pub fn parse(target_dir: &Path, env_var: &str) -> Result<ParsedResult, CustomErr
         })?;
         s0.domain()
             .ok_or(CustomError::new(format!("no domain found")))?;
-        s1.domain()
-            .ok_or(CustomError::new(format!("no domain found")))?;
 
         let basic_auth = if s0.username() != "" {
             let key = (
@@ -77,9 +82,10 @@ pub fn parse(target_dir: &Path, env_var: &str) -> Result<ParsedResult, CustomErr
             None
         };
         let loc = Location {
+            config,
             location: s0.path().to_string(),
-            domain: exclude_path_and_query_param(&s1),
-            alias: s1.path().to_string(),
+            domain: get_scheme_and_domain_from_uri(&s1),
+            alias: force_append_trailing_slash(s1.path()),
             fallback: s1.query().unwrap_or("").contains("fallback"),
             basic_auth: basic_auth.map(|x| x.to_str().unwrap().to_string()),
             cache_type: parse_cache_type(s1.query().unwrap_or("")),
@@ -94,6 +100,7 @@ pub fn parse(target_dir: &Path, env_var: &str) -> Result<ParsedResult, CustomErr
                 server_map.insert(
                     domain.to_string(),
                     Server {
+                        config,
                         domain: get_domain(Some(domain)),
                         port: s0.port(),
                         locations: vec![loc],
@@ -119,6 +126,7 @@ mod tests {
     #[test]
     fn test_parse() {
         let target_dir = PathBuf::from("/etc/nginx/conf.d");
+        let config = Config { docker_mode: false };
         for (conf_str, expected) in [
             (
                 "/>/var/www/html/?must-revalidate",
@@ -128,9 +136,11 @@ mod tests {
                     server_map: HashMap::from_iter([(
                         "*".to_string(),
                         Server {
+                            config: &config,
                             domain: None,
                             port: None,
                             locations: vec![Location {
+                                config: &config,
                                 location: "/".to_string(),
                                 domain: None,
                                 alias: "/var/www/html/".to_string(),
@@ -152,9 +162,11 @@ mod tests {
                     server_map: HashMap::from_iter([(
                         "*".to_string(),
                         Server {
+                            config: &config,
                             domain: None,
                             port: None,
                             locations: vec![Location {
+                                config: &config,
                                 location: "/hello/".to_string(),
                                 domain: None,
                                 alias: "/var/www/html/foo/".to_string(),
@@ -167,6 +179,32 @@ mod tests {
                 },
             ),
             (
+                "/test/foo > http://app:8000",
+                ParsedResult {
+                    target_dir: target_dir.clone(),
+                    basic_auth_map: HashSet::new(),
+                    server_map: HashMap::from_iter([(
+                        "*".to_string(),
+                        Server {
+                            config: &config,
+                            domain: None,
+                            port: None,
+                            locations: vec![
+                                Location {
+                                    config: &config,
+                                    location: "/test/foo".to_string(),
+                                    domain: Some("http://app:8000".to_string()),
+                                    alias: "/".to_string(),
+                                    fallback: false,
+                                    basic_auth: None,
+                                    cache_type: CacheType::None,
+                                },
+                            ],
+                        },
+                    )]),
+                },
+            ),
+            (
                 "/static>/var/www/html/;/>http://app:8000/",
                 ParsedResult {
                     target_dir: target_dir.clone(),
@@ -174,10 +212,12 @@ mod tests {
                     server_map: HashMap::from_iter([(
                         "*".to_string(),
                         Server {
+                            config: &config,
                             domain: None,
                             port: None,
                             locations: vec![
                                 Location {
+                                    config: &config,
                                     location: "/static".to_string(),
                                     domain: None,
                                     alias: "/var/www/html/".to_string(),
@@ -186,6 +226,7 @@ mod tests {
                                     cache_type: CacheType::None,
                                 },
                                 Location {
+                                    config: &config,
                                     location: "/".to_string(),
                                     domain: Some("http://app:8000".to_string()),
                                     alias: "/".to_string(),
@@ -209,10 +250,12 @@ mod tests {
                     server_map: HashMap::from_iter([(
                         "*".to_string(),
                         Server {
+                            config: &config,
                             domain: None,
                             port: None,
                             locations: vec![
                                 Location {
+                                    config: &config,
                                     location: "/static".to_string(),
                                     domain: None,
                                     alias: "/var/www/html/".to_string(),
@@ -221,6 +264,7 @@ mod tests {
                                     cache_type: CacheType::None,
                                 },
                                 Location {
+                                    config: &config,
                                     location: "/".to_string(),
                                     domain: Some("http://app:8000".to_string()),
                                     alias: "/".to_string(),
@@ -242,9 +286,11 @@ mod tests {
                         (
                             "hoge.localhost".to_string(),
                             Server {
+                                config: &config,
                                 domain: Some("hoge.localhost".to_string()),
                                 port: Some(3333),
                                 locations: vec![Location {
+                                    config: &config,
                                     location: "/".to_string(),
                                     domain: None,
                                     alias: "/var/www/html/hoge/".to_string(),
@@ -257,9 +303,11 @@ mod tests {
                         (
                             "foo.localhost".to_string(),
                             Server {
+                                config: &config,
                                 domain: Some("foo.localhost".to_string()),
                                 port: None,
                                 locations: vec![Location {
+                                    config: &config,
                                     location: "/".to_string(),
                                     domain: None,
                                     alias: "/var/www/html/foo/".to_string(),
@@ -281,9 +329,11 @@ mod tests {
                         (
                             "*".to_string(),
                             Server {
+                                config: &config,
                                 domain: None,
                                 port: Some(8888),
                                 locations: vec![Location {
+                                    config: &config,
                                     location: "/secret/".to_string(),
                                     domain: None,
                                     alias: "/var/www/html/secret/".to_string(),
@@ -296,9 +346,11 @@ mod tests {
                         (
                             "foo.localhost".to_string(),
                             Server {
+                                config: &config,
                                 domain: Some("foo.localhost".to_string()),
                                 port: None,
                                 locations: vec![Location {
+                                    config: &config,
                                     location: "/".to_string(),
                                     domain: None,
                                     alias: "/var/www/html/foo/".to_string(),
@@ -312,7 +364,7 @@ mod tests {
                 },
             ),
         ] {
-            let parsed_result = parse(&target_dir, conf_str).expect("parse failed");
+            let parsed_result = parse(&target_dir, conf_str, &config).expect("parse failed");
             assert_eq!(parsed_result, expected);
         }
     }

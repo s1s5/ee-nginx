@@ -2,9 +2,15 @@ use askama::Template;
 
 use crate::CacheType;
 
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Config {
+    pub docker_mode: bool,
+}
+
 #[derive(Template, Debug, Clone, Eq, PartialEq)]
 #[template(path = "location.jinja")]
-pub struct Location {
+pub struct Location<'a> {
+    pub config: &'a Config,
     pub location: String,
     pub domain: Option<String>,
     pub alias: String,
@@ -15,10 +21,11 @@ pub struct Location {
 
 #[derive(Template, Debug, Clone, Eq, PartialEq)]
 #[template(path = "server.jinja")]
-pub struct Server {
+pub struct Server<'a> {
+    pub config: &'a Config,
     pub domain: Option<String>,
     pub port: Option<u16>,
-    pub locations: Vec<Location>,
+    pub locations: Vec<Location<'a>>,
 }
 
 #[cfg(test)]
@@ -27,8 +34,10 @@ mod tests {
 
     #[test]
     fn test_location_0() {
+        let config = Config { docker_mode: false };
         assert_eq!(
             Location {
+                config: &config,
                 location: "/".to_string(),
                 domain: None,
                 alias: "/var/www/html/".to_string(),
@@ -48,8 +57,10 @@ mod tests {
 
     #[test]
     fn test_location_1() {
+        let config = Config { docker_mode: false };
         assert_eq!(
             Location {
+                config: &config,
                 location: "/".to_string(),
                 domain: None,
                 alias: "/var/www/html/".to_string(),
@@ -69,8 +80,10 @@ mod tests {
 
     #[test]
     fn test_location_2() {
+        let config = Config { docker_mode: false };
         assert_eq!(
             Location {
+                config: &config,
                 location: "/".to_string(),
                 domain: Some("http://app:8000".to_string()),
                 alias: "/".to_string(),
@@ -91,8 +104,10 @@ mod tests {
 
     #[test]
     fn test_location_3() {
+        let config = Config { docker_mode: false };
         assert_eq!(
             Location {
+                config: &config,
                 location: "/".to_string(),
                 domain: None,
                 alias: "/var/www/html/".to_string(),
@@ -114,8 +129,10 @@ mod tests {
 
     #[test]
     fn test_server_0() {
+        let config = Config { docker_mode: false };
         assert_eq!(
             Server {
+                config: &config,
                 domain: None,
                 port: Some(99),
                 locations: vec![]
@@ -130,8 +147,10 @@ mod tests {
 
     #[test]
     fn test_server_1() {
+        let config = Config { docker_mode: false };
         assert_eq!(
             Server {
+                config: &config,
                 domain: Some("foo.localhost".to_string()),
                 port: None,
                 locations: vec![]

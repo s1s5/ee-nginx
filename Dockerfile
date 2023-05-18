@@ -35,6 +35,7 @@ COPY --from=builder /home/rust/target/*-unknown-linux-musl/release/$APP_NAME ./g
 ENV RUST_LOG info
 ENV NGINX_CONF "/>/usr/share/nginx/html/"
 ENV NGINX_CONF_FILE ""
+ENV NGINX_IN_DOCKER "true"
 
 WORKDIR /
 RUN echo $'#!bin/sh\n\

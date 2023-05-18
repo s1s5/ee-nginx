@@ -1,5 +1,5 @@
 use clap::Parser;
-use ee_nginx::{output, parse};
+use ee_nginx::{output, parse, Config};
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
@@ -19,7 +19,16 @@ struct Args {
 }
 
 impl Args {
-    fn get_conf(&self) -> String {
+    fn get_output_conf(&self) -> Config {
+        let docker_mode = std::env::var("NGINX_IN_DOCKER")
+            .ok()
+            .unwrap_or("false".to_string())
+            == "true";
+        Config {
+            docker_mode: docker_mode,
+        }
+    }
+    fn get_nginx_conf(&self) -> String {
         if let Some(conf_str) = &self.conf_str {
             conf_str.clone()
         } else if let Some(conf_file) = &self.conf_file {
@@ -36,9 +45,9 @@ fn main() {
     env_logger::init();
 
     let args = Args::parse();
-
+    let conf = args.get_output_conf();
     let parsed_result =
-        parse(&PathBuf::from(&args.dst_dir), &args.get_conf()).expect("parse failed");
+        parse(&PathBuf::from(&args.dst_dir), &args.get_nginx_conf(), &conf).expect("parse failed");
 
     output(&parsed_result).expect("output failed");
 }

@@ -10,6 +10,7 @@ mod templates;
 mod utils;
 pub use output::output;
 pub use parse::parse;
+pub use templates::Config;
 use templates::Server;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -20,8 +21,8 @@ pub enum CacheType {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct ParsedResult {
+pub struct ParsedResult<'a> {
     target_dir: PathBuf,
     basic_auth_map: HashSet<(String, String)>,
-    server_map: HashMap<String, Server>,
+    server_map: HashMap<String, Server<'a>>,
 }
