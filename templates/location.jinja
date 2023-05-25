@@ -7,7 +7,11 @@
     {% endif %}{% else %}proxy_pass {{ domain }}{{ alias }};
     {% endif %}proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
-{% else %}alias {{ alias }};
+    proxy_redirect off;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+{% else %}    alias {{ alias }};
     index index.html index.htm;
 {% match cache_type %}{% when CacheType::MustRevalidate %}    add_header Cache-Control "no-cache";
 {% when CacheType::Versioned %}    add_header Cache-Control "public, max-age=31536000";
