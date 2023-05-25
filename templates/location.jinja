@@ -1,5 +1,5 @@
   location {{ location }} {{ "{" }}
-    {% if let Some(domain) = domain %}{% if config.docker_mode %}resolver 127.0.0.11 valid=2s ipv6=off;
+    {% if let Some(domain) = domain %}{% if config.docker_mode %}resolver {{ nameserver }} valid=2s ipv6=off;
     set $target "{{ domain }}{{ alias }}";
     rewrite {{ location }}(.*) /$1 break;
     {% if alias.ends_with("/") %}proxy_pass $target$1$is_args$args;

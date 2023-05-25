@@ -30,6 +30,7 @@ pub fn parse<'a>(
     target_dir: &Path,
     env_var: &str,
     config: &'a Config,
+    nameserver: &str,
 ) -> Result<ParsedResult<'a>, CustomError> {
     let api = Url::parse("file://*").unwrap();
     let parser = Url::options().base_url(Some(&api));
@@ -92,6 +93,7 @@ pub fn parse<'a>(
             fallback: s1.query().unwrap_or("").contains("fallback"),
             basic_auth: basic_auth.map(|x| x.to_str().unwrap().to_string()),
             cache_type: parse_cache_type(s1.query().unwrap_or("")),
+            nameserver: nameserver.to_string(),
         };
 
         let domain = s0.domain().unwrap();
@@ -150,6 +152,7 @@ mod tests {
                                 fallback: false,
                                 basic_auth: None,
                                 cache_type: CacheType::MustRevalidate,
+                                nameserver: "".to_string(),
                             }],
                         },
                     )]),
@@ -176,6 +179,7 @@ mod tests {
                                 fallback: false,
                                 basic_auth: None,
                                 cache_type: CacheType::None,
+                                nameserver: "".to_string(),
                             }],
                         },
                     )]),
@@ -201,6 +205,7 @@ mod tests {
                                     fallback: false,
                                     basic_auth: None,
                                     cache_type: CacheType::None,
+                                    nameserver: "".to_string(),
                                 },
                             ],
                         },
@@ -227,6 +232,7 @@ mod tests {
                                     fallback: false,
                                     basic_auth: None,
                                     cache_type: CacheType::None,
+                                    nameserver: "".to_string(),
                                 },
                                 Location {
                                     config: &config,
@@ -236,6 +242,7 @@ mod tests {
                                     fallback: false,
                                     basic_auth: None,
                                     cache_type: CacheType::None,
+                                    nameserver: "".to_string(),
                                 },
                             ],
                         },
@@ -267,6 +274,7 @@ mod tests {
                                     fallback: false,
                                     basic_auth: None,
                                     cache_type: CacheType::None,
+                                    nameserver: "".to_string(),
                                 },
                                 Location {
                                     config: &config,
@@ -276,6 +284,7 @@ mod tests {
                                     fallback: false,
                                     basic_auth: None,
                                     cache_type: CacheType::None,
+                                    nameserver: "".to_string(),
                                 },
                             ],
                         },
@@ -302,6 +311,7 @@ mod tests {
                                     fallback: false,
                                     basic_auth: None,
                                     cache_type: CacheType::None,
+                                    nameserver: "".to_string(),
                                 }],
                             },
                         ),
@@ -319,6 +329,7 @@ mod tests {
                                     fallback: false,
                                     basic_auth: None,
                                     cache_type: CacheType::None,
+                                    nameserver: "".to_string(),
                                 }],
                             },
                         ),
@@ -345,6 +356,7 @@ mod tests {
                                     fallback: false,
                                     basic_auth: Some("/etc/nginx/conf.d/xzuimCxVt-rQ5AmKkvcivbOjs9g".to_string()),
                                     cache_type: CacheType::None,
+                                    nameserver: "".to_string(),
                                 }],
                             },
                         ),
@@ -362,6 +374,7 @@ mod tests {
                                     fallback: false,
                                     basic_auth: Some("/etc/nginx/conf.d/xzuimCxVt-rQ5AmKkvcivbOjs9g".to_string()),
                                     cache_type: CacheType::None,
+                                    nameserver: "".to_string(),
                                 }],
                             },
                         ),
@@ -369,7 +382,7 @@ mod tests {
                 },
             ),
         ] {
-            let parsed_result = parse(&target_dir, conf_str, &config).expect("parse failed");
+            let parsed_result = parse(&target_dir, conf_str, &config, "").expect("parse failed");
             assert_eq!(parsed_result, expected);
         }
     }

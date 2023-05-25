@@ -17,6 +17,7 @@ pub struct Location<'a> {
     pub fallback: bool,
     pub basic_auth: Option<String>,
     pub cache_type: CacheType,
+    pub nameserver: String,
 }
 
 #[derive(Template, Debug, Clone, Eq, PartialEq)]
@@ -44,6 +45,7 @@ mod tests {
                 fallback: false,
                 basic_auth: None,
                 cache_type: CacheType::None,
+                nameserver: "".to_string(),
             }
             .render()
             .expect("failed to render location"),
@@ -67,6 +69,7 @@ mod tests {
                 fallback: false,
                 basic_auth: None,
                 cache_type: CacheType::MustRevalidate,
+                nameserver: "".to_string(),
             }
             .render()
             .expect("failed to render location"),
@@ -90,6 +93,7 @@ mod tests {
                 fallback: true,
                 basic_auth: None,
                 cache_type: CacheType::None,
+                nameserver: "".to_string(),
             }
             .render()
             .expect("failed to render location"),
@@ -114,6 +118,7 @@ mod tests {
                 fallback: false,
                 basic_auth: Some("/etc/nginx/conf.d/htpasswd".to_string()),
                 cache_type: CacheType::None,
+                nameserver: "".to_string(),
             }
             .render()
             .expect("failed to render location"),

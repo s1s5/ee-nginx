@@ -1,6 +1,6 @@
 use clap::Parser;
 use ee_nginx::{output, parse, Config};
-use std::path::PathBuf;
+use std::{io::BufRead, path::PathBuf};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -41,13 +41,38 @@ impl Args {
     }
 }
 
+fn extract_nameserver_from_resolv_conf() -> std::io::Result<String> {
+    let file = std::fs::File::open("/etc/resolv.conf")?;
+    let reader = std::io::BufReader::new(file);
+    for line in reader.lines() {
+        let line = line?.trim().to_string();
+        if line.starts_with('#') {
+            continue;
+        }
+        let tokens: Vec<_> = line.split(char::is_whitespace).collect();
+        if tokens.len() >= 2 && tokens[0] == "nameserver" {
+            return Ok(tokens[1].to_string());
+        }
+    }
+    Err(std::io::Error::new(
+        std::io::ErrorKind::NotFound,
+        "nameserver line not found",
+    ))
+}
+
 fn main() {
     env_logger::init();
 
     let args = Args::parse();
     let conf = args.get_output_conf();
-    let parsed_result =
-        parse(&PathBuf::from(&args.dst_dir), &args.get_nginx_conf(), &conf).expect("parse failed");
+    let nameserver = extract_nameserver_from_resolv_conf().unwrap_or("127.0.0.53".to_string());
+    let parsed_result = parse(
+        &PathBuf::from(&args.dst_dir),
+        &args.get_nginx_conf(),
+        &conf,
+        &nameserver,
+    )
+    .expect("parse failed");
 
     output(&parsed_result).expect("output failed");
 }
