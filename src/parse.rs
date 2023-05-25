@@ -1,9 +1,10 @@
 use std::{
     collections::{HashMap, HashSet},
+    net::IpAddr,
     path::{Path, PathBuf},
 };
 
-use log::debug;
+use log::{debug, warn};
 use url::Url;
 
 use crate::{
@@ -31,6 +32,7 @@ pub fn parse<'a>(
     env_var: &str,
     config: &'a Config,
     nameserver: &str,
+    hosts: &HashMap<String, IpAddr>,
 ) -> Result<ParsedResult<'a>, CustomError> {
     let api = Url::parse("file://*").unwrap();
     let parser = Url::options().base_url(Some(&api));
@@ -85,10 +87,26 @@ pub fn parse<'a>(
         } else {
             None
         };
+
         let loc = Location {
             config,
             location: s0.path().to_string(),
-            domain: get_scheme_and_domain_from_uri(&s1),
+            domain: {
+                if let Some(domain) = s1.domain() {
+                    let mut uri = s1.clone();
+                    if let Some(ipaddr) = hosts.get(domain) {
+                        match uri.set_ip_host(ipaddr.clone()) {
+                            Ok(_) => {}
+                            Err(e) => {
+                                warn!("fialed to set_ip_host '{:?}', error={:?}", ipaddr, e);
+                            }
+                        }
+                    }
+                    get_scheme_and_domain_from_uri(&uri)
+                } else {
+                    get_scheme_and_domain_from_uri(&s1)
+                }
+            },
             alias: force_append_trailing_slash(s1.path()),
             fallback: s1.query().unwrap_or("").contains("fallback"),
             basic_auth: basic_auth.map(|x| x.to_str().unwrap().to_string()),
@@ -382,7 +400,7 @@ mod tests {
                 },
             ),
         ] {
-            let parsed_result = parse(&target_dir, conf_str, &config, "").expect("parse failed");
+            let parsed_result = parse(&target_dir, conf_str, &config, "", &HashMap::new()).expect("parse failed");
             assert_eq!(parsed_result, expected);
         }
     }

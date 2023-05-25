@@ -1,6 +1,6 @@
 use clap::Parser;
 use ee_nginx::{output, parse, Config};
-use std::{io::BufRead, path::PathBuf};
+use std::{collections::HashMap, io::BufRead, net::IpAddr, path::PathBuf, str::FromStr};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -60,19 +60,49 @@ fn extract_nameserver_from_resolv_conf() -> std::io::Result<String> {
     ))
 }
 
+fn extract_etc_hosts() -> std::io::Result<HashMap<String, IpAddr>> {
+    let file = std::fs::File::open("/etc/hosts")?;
+    let reader = std::io::BufReader::new(file);
+    let mut hosts = HashMap::new();
+    for line in reader.lines() {
+        let line = line?.trim().to_string();
+        if line.starts_with('#') {
+            continue;
+        }
+        let tokens: Vec<_> = line.split(char::is_whitespace).collect();
+        if tokens.len() == 2 {
+            let ipaddr = IpAddr::from_str(tokens[0]);
+            if let Some(ipaddr) = ipaddr.ok() {
+                let hostname = tokens[1];
+                hosts.insert(hostname.to_string(), ipaddr);
+            }
+        }
+    }
+    Ok(hosts)
+}
+
 fn main() {
     env_logger::init();
 
     let args = Args::parse();
     let conf = args.get_output_conf();
     let nameserver = extract_nameserver_from_resolv_conf().unwrap_or("127.0.0.53".to_string());
+    let hosts = extract_etc_hosts().unwrap_or(HashMap::new());
     let parsed_result = parse(
         &PathBuf::from(&args.dst_dir),
         &args.get_nginx_conf(),
         &conf,
         &nameserver,
+        &hosts,
     )
     .expect("parse failed");
 
     output(&parsed_result).expect("output failed");
+}
+
+#[cfg(test)]
+mod tests {
+
+    #[test]
+    fn test_parse_etc_hosts() {}
 }
