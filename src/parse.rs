@@ -41,6 +41,13 @@ pub fn parse<'a>(
         .split(|c| c == '\n')
         .map(|x| x.trim())
         .filter(|x| !x.starts_with("#"))
+        .map(|x| {
+            if let Some(index) = x.chars().position(|c| c == '#') {
+                &x[..index]
+            } else {
+                x
+            }
+        })
         .flat_map(|l| l.split(|c| c == ';'))
         .map(|x| x.trim())
         .filter(|x| x.len() > 0)
@@ -48,6 +55,7 @@ pub fn parse<'a>(
     let mut basic_auth_map: HashSet<(String, String)> = HashSet::new();
     let mut server_map: HashMap<String, Server> = HashMap::new();
     for conf in configs {
+        debug!("loading config : {}", conf);
         let s: Vec<&str> = conf
             .split(|c| c == '>')
             .map(|x| x.trim())
