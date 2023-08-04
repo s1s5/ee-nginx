@@ -13,16 +13,14 @@ version: '3'
 
 services:
   nginx:
-    build:
-      context: ..
     environment:
       NGINX_CONF: |
-        / > /mnt/root/
-        /app/ > http://app:8000/
-        /static > /mnt/static/?versioned
-        http://user:password@*/secret > /mnt/secret/
-        http://hoge.localhost/ > /mnt/hoge/
-        http://hoge.localhost/static > /mnt/static/?must-revalidate
+        / > /mnt/root/                    # http://nginx/a.jpg -> /mnt/root/a.jpg  (no cache)
+        /app/ > http://app:8000/          # http://nginx/app/profile/ -> http://app:8000/profile/
+        /static > /mnt/static/?versioned  # cached, no validation
+        http://user:password@*/secret > /mnt/secret/  # add basic auth
+        http://hoge.localhost/ > /mnt/hoge/           # specific host routing
+        http://hoge.localhost/static > /mnt/static/?must-revalidate  # cached, always check modification
 ```
 
 ## Run Example
