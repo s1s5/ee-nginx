@@ -18,6 +18,7 @@ pub struct Location<'a> {
     pub basic_auth: Option<String>,
     pub cache_type: CacheType,
     pub nameserver: String,
+    pub show_index: bool,
 }
 
 #[derive(Template, Debug, Clone, Eq, PartialEq)]
@@ -46,6 +47,7 @@ mod tests {
                 basic_auth: None,
                 cache_type: CacheType::None,
                 nameserver: "".to_string(),
+                show_index: false,
             }
             .render()
             .expect("failed to render location"),
@@ -70,6 +72,7 @@ mod tests {
                 basic_auth: None,
                 cache_type: CacheType::MustRevalidate,
                 nameserver: "".to_string(),
+                show_index: false,
             }
             .render()
             .expect("failed to render location"),
@@ -94,6 +97,7 @@ mod tests {
                 basic_auth: None,
                 cache_type: CacheType::None,
                 nameserver: "".to_string(),
+                show_index: false,
             }
             .render()
             .expect("failed to render location"),
@@ -123,6 +127,7 @@ mod tests {
                 basic_auth: Some("/etc/nginx/conf.d/htpasswd".to_string()),
                 cache_type: CacheType::None,
                 nameserver: "".to_string(),
+                show_index: false,
             }
             .render()
             .expect("failed to render location"),
@@ -132,6 +137,34 @@ mod tests {
     add_header Cache-Control "no-store";
     auth_basic "Authorization required";
     auth_basic_user_file /etc/nginx/conf.d/htpasswd;
+  }"#
+        );
+    }
+
+    #[test]
+    fn test_location_4() {
+        let config = Config { docker_mode: false };
+        assert_eq!(
+            Location {
+                config: &config,
+                location: "/".to_string(),
+                domain: None,
+                alias: "/var/www/html/".to_string(),
+                fallback: false,
+                basic_auth: None,
+                cache_type: CacheType::None,
+                nameserver: "".to_string(),
+                show_index: true,
+            }
+            .render()
+            .expect("failed to render location"),
+            r#"  location / {
+    alias /var/www/html/;
+    index index.html index.htm;
+    add_header Cache-Control "no-store";
+    autoindex on;
+    autoindex_exact_size off;
+    autoindex_localtime on;
   }"#
         );
     }
@@ -150,6 +183,7 @@ mod tests {
             .expect("failed to render location"),
             r#"server {
   listen 99;
+  client_max_body_size 1000M;
 }"#
         );
     }
@@ -168,6 +202,7 @@ mod tests {
             .expect("failed to render location"),
             r#"server {
   listen 80;
+  client_max_body_size 1000M;
   server_name foo.localhost;
 }"#
         );

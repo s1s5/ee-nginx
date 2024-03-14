@@ -57,3 +57,12 @@ will contains following settings
 ```
 try_files $uri $uri/ / =404;
 ```
+
+- show index
+```
+/ > /?index
+```
+
+
+# development
+- docker buildx build --platform linux/amd64,linux/arm64 -f multi-platform.Dockerfile -t s1s5/ee-nginx .

@@ -13,6 +13,7 @@ services:
         http://user:password@*/secret > /mnt/secret/
         http://hoge.localhost/ > /mnt/hoge/
         http://hoge.localhost/static > /mnt/static/?must-revalidate
+        http://foo.localhost/ > /mnt/foo/?index
     volumes:
       - ./mnt:/mnt
     ports:

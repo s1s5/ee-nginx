@@ -1,5 +1,6 @@
 server {{ "{" }}
   listen {% if let Some(port) = port %}{{ port }}{% else %}80{% endif %};
+  client_max_body_size 1000M;
 {% if let Some(domain) = domain %}  server_name {{ domain }};
 {% endif %}{% for location in locations %}{{ location|safe }}
 {% endfor %}{{ "}" }}
