@@ -115,12 +115,17 @@ pub fn parse<'a>(
                     get_scheme_and_domain_from_uri(&s1)
                 }
             },
-            alias: force_append_trailing_slash(s1.path()),
+            alias: if s0.query().unwrap_or("").contains("file") {
+                s1.path().to_string()
+            } else {
+                force_append_trailing_slash(s1.path())
+            },
             fallback: s1.query().unwrap_or("").contains("fallback"),
             basic_auth: basic_auth.map(|x| x.to_str().unwrap().to_string()),
             cache_type: parse_cache_type(s1.query().unwrap_or("")),
             nameserver: nameserver.to_string(),
             show_index: s1.query().unwrap_or("").contains("index"),
+            is_file: s0.query().unwrap_or("").contains("file"),
         };
 
         let domain = s0.domain().unwrap();
@@ -181,6 +186,7 @@ mod tests {
                                 cache_type: CacheType::MustRevalidate,
                                 nameserver: "".to_string(),
                                 show_index: false,
+                                is_file: false,
                             }],
                         },
                     )]),
@@ -207,6 +213,7 @@ mod tests {
                                 cache_type: CacheType::None,
                                 nameserver: "".to_string(),
                                 show_index: true,
+                                is_file: false,
                             }],
                         },
                     )]),
@@ -235,6 +242,7 @@ mod tests {
                                 cache_type: CacheType::None,
                                 nameserver: "".to_string(),
                                 show_index: false,
+                                is_file: false,
                             }],
                         },
                     )]),
@@ -262,6 +270,7 @@ mod tests {
                                     cache_type: CacheType::None,
                                     nameserver: "".to_string(),
                                     show_index: false,
+                                    is_file: false,
                                 },
                             ],
                         },
@@ -290,6 +299,7 @@ mod tests {
                                     cache_type: CacheType::None,
                                     nameserver: "".to_string(),
                                     show_index: false,
+                                    is_file: false,
                                 },
                                 Location {
                                     config: &config,
@@ -301,6 +311,7 @@ mod tests {
                                     cache_type: CacheType::None,
                                     nameserver: "".to_string(),
                                     show_index: false,
+                                    is_file: false,
                                 },
                             ],
                         },
@@ -334,6 +345,7 @@ mod tests {
                                     cache_type: CacheType::None,
                                     nameserver: "".to_string(),
                                     show_index: false,
+                                    is_file: false,
                                 },
                                 Location {
                                     config: &config,
@@ -345,6 +357,53 @@ mod tests {
                                     cache_type: CacheType::None,
                                     nameserver: "".to_string(),
                                     show_index: false,
+                                    is_file: false,
+                                },
+                            ],
+                        },
+                    )]),
+                },
+            ),
+            (
+                r#"
+                # static files location
+                /static/config.json?file > /var/www/html/config.stg.json
+                # app reverse proxy
+                /config.json?file       > http://app:8000/config.dev.json
+                "#,
+                ParsedResult {
+                    target_dir: target_dir.clone(),
+                    basic_auth_map: HashSet::new(),
+                    server_map: HashMap::from_iter([(
+                        "*".to_string(),
+                        Server {
+                            config: &config,
+                            domain: None,
+                            port: None,
+                            locations: vec![
+                                Location {
+                                    config: &config,
+                                    location: "/static/config.json".to_string(),
+                                    domain: None,
+                                    alias: "/var/www/html/config.stg.json".to_string(),
+                                    fallback: false,
+                                    basic_auth: None,
+                                    cache_type: CacheType::None,
+                                    nameserver: "".to_string(),
+                                    show_index: false,
+                                    is_file: true,
+                                },
+                                Location {
+                                    config: &config,
+                                    location: "/config.json".to_string(),
+                                    domain: Some("http://app:8000".to_string()),
+                                    alias: "/config.dev.json".to_string(),
+                                    fallback: false,
+                                    basic_auth: None,
+                                    cache_type: CacheType::None,
+                                    nameserver: "".to_string(),
+                                    show_index: false,
+                                    is_file: true,
                                 },
                             ],
                         },
@@ -373,6 +432,7 @@ mod tests {
                                     cache_type: CacheType::None,
                                     nameserver: "".to_string(),
                                     show_index: false,
+                                    is_file: false,
                                 }],
                             },
                         ),
@@ -392,6 +452,7 @@ mod tests {
                                     cache_type: CacheType::None,
                                     nameserver: "".to_string(),
                                     show_index: false,
+                                    is_file: false,
                                 }],
                             },
                         ),
@@ -420,6 +481,7 @@ mod tests {
                                     cache_type: CacheType::None,
                                     nameserver: "".to_string(),
                                     show_index: false,
+                                    is_file: false,
                                 }],
                             },
                         ),
@@ -439,6 +501,7 @@ mod tests {
                                     cache_type: CacheType::None,
                                     nameserver: "".to_string(),
                                     show_index: false,
+                                    is_file: false,
                                 }],
                             },
                         ),

@@ -19,6 +19,7 @@ pub struct Location<'a> {
     pub cache_type: CacheType,
     pub nameserver: String,
     pub show_index: bool,
+    pub is_file: bool,
 }
 
 #[derive(Template, Debug, Clone, Eq, PartialEq)]
@@ -48,6 +49,7 @@ mod tests {
                 cache_type: CacheType::None,
                 nameserver: "".to_string(),
                 show_index: false,
+                is_file: false,
             }
             .render()
             .expect("failed to render location"),
@@ -73,6 +75,7 @@ mod tests {
                 cache_type: CacheType::MustRevalidate,
                 nameserver: "".to_string(),
                 show_index: false,
+                is_file: false,
             }
             .render()
             .expect("failed to render location"),
@@ -98,6 +101,7 @@ mod tests {
                 cache_type: CacheType::None,
                 nameserver: "".to_string(),
                 show_index: false,
+                is_file: false,
             }
             .render()
             .expect("failed to render location"),
@@ -128,6 +132,7 @@ mod tests {
                 cache_type: CacheType::None,
                 nameserver: "".to_string(),
                 show_index: false,
+                is_file: false,
             }
             .render()
             .expect("failed to render location"),
@@ -155,6 +160,7 @@ mod tests {
                 cache_type: CacheType::None,
                 nameserver: "".to_string(),
                 show_index: true,
+                is_file: false,
             }
             .render()
             .expect("failed to render location"),
@@ -168,6 +174,67 @@ mod tests {
   }"#
         );
     }
+
+    #[test]
+    fn test_location_file_0() {
+        let config = Config { docker_mode: true };
+        assert_eq!(
+            Location {
+                config: &config,
+                location: "/config.json".to_string(),
+                domain: None,
+                alias: "/var/www/html/config.dev.json".to_string(),
+                fallback: false,
+                basic_auth: None,
+                cache_type: CacheType::None,
+                nameserver: "".to_string(),
+                show_index: false,
+                is_file: true,
+            }
+            .render()
+            .expect("failed to render location"),
+            r#"  location /config.json {
+    alias /var/www/html/config.dev.json;
+    index index.html index.htm;
+    add_header Cache-Control "no-store";
+  }"#
+        );
+    }
+
+    #[test]
+    fn test_location_file_2() {
+        let config = Config { docker_mode: true };
+        assert_eq!(
+            Location {
+                config: &config,
+                location: "/config.json".to_string(),
+                domain: Some("http://app:8000".to_string()),
+                alias: "/config.stg.json".to_string(),
+                fallback: true,
+                basic_auth: None,
+                cache_type: CacheType::None,
+                nameserver: "127.0.0.11".to_string(),
+                show_index: false,
+                is_file: true,
+            }
+            .render()
+            .expect("failed to render location"),
+            r#"  location /config.json {
+    resolver 127.0.0.11 valid=2s ipv6=off;
+    set $target "http://app:8000";
+    rewrite ^/config.json(.*)$ /config.stg.json$1 break;
+    proxy_pass $target$uri$is_args$args;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_redirect off;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    try_files $uri $uri/ / =404;
+  }"#
+        );
+    }
+
 
     #[test]
     fn test_server_0() {

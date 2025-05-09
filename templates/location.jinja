@@ -1,10 +1,13 @@
   location {{ location }} {{ "{" }}
     {% if let Some(domain) = domain %}{% if config.docker_mode %}resolver {{ nameserver }} valid=2s ipv6=off;
-    set $target "{{ domain }}{{ alias }}";
+    {% if is_file %}set $target "{{ domain }}";
+    rewrite ^{{ location }}(.*)$ {{ alias }}$1 break;
+    proxy_pass $target$uri$is_args$args;
+    {% else %}set $target "{{ domain }}{{ alias }}";
     rewrite {{ location }}(.*) /$1 break;
     {% if alias.ends_with("/") %}proxy_pass $target$1$is_args$args;
     {% else %}proxy_pass $target{{ location }}$1$is_args$args;
-    {% endif %}{% else %}proxy_pass {{ domain }}{{ alias }};
+    {% endif %}{% endif %}{% else %}proxy_pass {{ domain }}{{ alias }};
     {% endif %}proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_redirect off;
