@@ -25,7 +25,7 @@ fn write_to_file(dst_path: &Path, content: &str) -> Result<(), CustomError> {
         debug!("// ---------- {:?} ----------", dst_path);
         debug!("{}", content);
 
-        let mut file = std::fs::File::create(&dst_path).map_err(|e| {
+        let mut file = std::fs::File::create(dst_path).map_err(|e| {
             CustomError::new(format!("failed to crete file. {:?}, {:?}", dst_path, e))
         })?;
         file.write_all(content.as_bytes()).map_err(|e| {

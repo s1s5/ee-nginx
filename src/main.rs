@@ -25,7 +25,7 @@ impl Args {
             .unwrap_or("false".to_string())
             == "true";
         Config {
-            docker_mode: docker_mode,
+            docker_mode
         }
     }
     fn get_nginx_conf(&self) -> String {
@@ -34,9 +34,7 @@ impl Args {
         } else if let Some(conf_file) = &self.conf_file {
             std::fs::read_to_string(conf_file).expect("failed to read file")
         } else {
-            std::env::var(&self.env_var)
-                .ok()
-                .expect("could not extract env value")
+            std::env::var(&self.env_var).expect("could not extract env value")
         }
     }
 }
@@ -71,8 +69,7 @@ fn extract_etc_hosts() -> std::io::Result<HashMap<String, IpAddr>> {
         }
         let tokens: Vec<_> = line.split(char::is_whitespace).collect();
         if tokens.len() == 2 {
-            let ipaddr = IpAddr::from_str(tokens[0]);
-            if let Some(ipaddr) = ipaddr.ok() {
+            if let Ok(ipaddr) = IpAddr::from_str(tokens[0]) {
                 let hostname = tokens[1];
                 hosts.insert(hostname.to_string(), ipaddr);
             }
@@ -87,7 +84,7 @@ fn main() {
     let args = Args::parse();
     let conf = args.get_output_conf();
     let nameserver = extract_nameserver_from_resolv_conf().unwrap_or("127.0.0.53".to_string());
-    let hosts = extract_etc_hosts().unwrap_or(HashMap::new());
+    let hosts = extract_etc_hosts().unwrap_or_default();
     let parsed_result = parse(
         &PathBuf::from(&args.dst_dir),
         &args.get_nginx_conf(),

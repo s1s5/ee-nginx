@@ -38,7 +38,7 @@ pub fn parse<'a>(
     let parser = Url::options().base_url(Some(&api));
 
     let configs: Vec<&str> = env_var
-        .split(|c| c == '\n')
+        .split('\n')
         .map(|x| x.trim())
         .filter(|x| !x.starts_with("#"))
         .map(|x| {
@@ -48,18 +48,18 @@ pub fn parse<'a>(
                 x
             }
         })
-        .flat_map(|l| l.split(|c| c == ';'))
+        .flat_map(|l| l.split(';'))
         .map(|x| x.trim())
-        .filter(|x| x.len() > 0)
+        .filter(|x| !x.is_empty())
         .collect();
     let mut basic_auth_map: HashSet<(String, String)> = HashSet::new();
     let mut server_map: HashMap<String, Server> = HashMap::new();
     for conf in configs {
         debug!("loading config : {}", conf);
         let s: Vec<&str> = conf
-            .split(|c| c == '>')
+            .split('>')
             .map(|x| x.trim())
-            .filter(|x| x.len() > 0)
+            .filter(|x| !x.is_empty())
             .collect();
         if s.len() != 2 {
             return Err(CustomError::new(format!(
@@ -80,7 +80,7 @@ pub fn parse<'a>(
             CustomError::new(format!("proxy param invalid '{}', Error = {:?}", s[1], e))
         })?;
         s0.domain()
-            .ok_or(CustomError::new(format!("no domain found")))?;
+            .ok_or(CustomError::new("no domain found".to_string()))?;
 
         let basic_auth = if s0.username() != "" {
             let key = (
@@ -103,7 +103,7 @@ pub fn parse<'a>(
                 if let Some(domain) = s1.domain() {
                     let mut uri = s1.clone();
                     if let Some(ipaddr) = hosts.get(domain) {
-                        match uri.set_ip_host(ipaddr.clone()) {
+                        match uri.set_ip_host(*ipaddr) {
                             Ok(_) => {}
                             Err(e) => {
                                 warn!("fialed to set_ip_host '{:?}', error={:?}", ipaddr, e);
