@@ -96,6 +96,9 @@ pub fn parse<'a>(
             None
         };
 
+        let s0_query = s0.query().unwrap_or("");
+        let s1_query = s1.query().unwrap_or("");
+
         let loc = Location {
             config,
             location: s0.path().to_string(),
@@ -115,17 +118,18 @@ pub fn parse<'a>(
                     get_scheme_and_domain_from_uri(&s1)
                 }
             },
-            alias: if s0.query().unwrap_or("").contains("file") {
+            alias: if s0_query.contains("file") {
                 s1.path().to_string()
             } else {
                 force_append_trailing_slash(s1.path())
             },
-            fallback: s1.query().unwrap_or("").contains("fallback"),
+            fallback: s1_query.contains("fallback"),
             basic_auth: basic_auth.map(|x| x.to_str().unwrap().to_string()),
-            cache_type: parse_cache_type(s1.query().unwrap_or("")),
+            cache_type: parse_cache_type(s1_query),
             nameserver: nameserver.to_string(),
-            show_index: s1.query().unwrap_or("").contains("index"),
-            is_file: s0.query().unwrap_or("").contains("file"),
+            show_index: s1_query.contains("index"),
+            is_file: s0_query.contains("file"),
+            enable_sse: s0_query.contains("sse") || s1_query.contains("sse"),
         };
 
         let domain = s0.domain().unwrap();
@@ -187,6 +191,7 @@ mod tests {
                                 nameserver: "".to_string(),
                                 show_index: false,
                                 is_file: false,
+                                enable_sse: false,
                             }],
                         },
                     )]),
@@ -214,6 +219,7 @@ mod tests {
                                 nameserver: "".to_string(),
                                 show_index: true,
                                 is_file: false,
+                                enable_sse: false,
                             }],
                         },
                     )]),
@@ -243,6 +249,7 @@ mod tests {
                                 nameserver: "".to_string(),
                                 show_index: false,
                                 is_file: false,
+                                enable_sse: false,
                             }],
                         },
                     )]),
@@ -271,6 +278,7 @@ mod tests {
                                     nameserver: "".to_string(),
                                     show_index: false,
                                     is_file: false,
+                                    enable_sse: false,
                                 },
                             ],
                         },
@@ -300,6 +308,7 @@ mod tests {
                                     nameserver: "".to_string(),
                                     show_index: false,
                                     is_file: false,
+                                    enable_sse: false,
                                 },
                                 Location {
                                     config: &config,
@@ -312,6 +321,7 @@ mod tests {
                                     nameserver: "".to_string(),
                                     show_index: false,
                                     is_file: false,
+                                    enable_sse: false,
                                 },
                             ],
                         },
@@ -346,6 +356,7 @@ mod tests {
                                     nameserver: "".to_string(),
                                     show_index: false,
                                     is_file: false,
+                                    enable_sse: false,
                                 },
                                 Location {
                                     config: &config,
@@ -358,6 +369,7 @@ mod tests {
                                     nameserver: "".to_string(),
                                     show_index: false,
                                     is_file: false,
+                                    enable_sse: false,
                                 },
                             ],
                         },
@@ -392,6 +404,7 @@ mod tests {
                                     nameserver: "".to_string(),
                                     show_index: false,
                                     is_file: true,
+                                    enable_sse: false,
                                 },
                                 Location {
                                     config: &config,
@@ -404,6 +417,7 @@ mod tests {
                                     nameserver: "".to_string(),
                                     show_index: false,
                                     is_file: true,
+                                    enable_sse: false,
                                 },
                             ],
                         },
@@ -433,6 +447,7 @@ mod tests {
                                     nameserver: "".to_string(),
                                     show_index: false,
                                     is_file: false,
+                                    enable_sse: false,
                                 }],
                             },
                         ),
@@ -453,6 +468,7 @@ mod tests {
                                     nameserver: "".to_string(),
                                     show_index: false,
                                     is_file: false,
+                                    enable_sse: false,
                                 }],
                             },
                         ),
@@ -482,6 +498,7 @@ mod tests {
                                     nameserver: "".to_string(),
                                     show_index: false,
                                     is_file: false,
+                                    enable_sse: false,
                                 }],
                             },
                         ),
@@ -502,6 +519,7 @@ mod tests {
                                     nameserver: "".to_string(),
                                     show_index: false,
                                     is_file: false,
+                                    enable_sse: false,
                                 }],
                             },
                         ),

@@ -20,6 +20,7 @@ pub struct Location<'a> {
     pub nameserver: String,
     pub show_index: bool,
     pub is_file: bool,
+    pub enable_sse: bool,
 }
 
 #[derive(Template, Debug, Clone, Eq, PartialEq)]
@@ -50,6 +51,7 @@ mod tests {
                 nameserver: "".to_string(),
                 show_index: false,
                 is_file: false,
+                enable_sse: false,
             }
             .render()
             .expect("failed to render location"),
@@ -76,6 +78,7 @@ mod tests {
                 nameserver: "".to_string(),
                 show_index: false,
                 is_file: false,
+                enable_sse: false,
             }
             .render()
             .expect("failed to render location"),
@@ -102,6 +105,7 @@ mod tests {
                 nameserver: "".to_string(),
                 show_index: false,
                 is_file: false,
+                enable_sse: false,
             }
             .render()
             .expect("failed to render location"),
@@ -133,6 +137,7 @@ mod tests {
                 nameserver: "".to_string(),
                 show_index: false,
                 is_file: false,
+                enable_sse: false,
             }
             .render()
             .expect("failed to render location"),
@@ -161,6 +166,7 @@ mod tests {
                 nameserver: "".to_string(),
                 show_index: true,
                 is_file: false,
+                enable_sse: false,
             }
             .render()
             .expect("failed to render location"),
@@ -190,6 +196,7 @@ mod tests {
                 nameserver: "".to_string(),
                 show_index: false,
                 is_file: true,
+                enable_sse: false,
             }
             .render()
             .expect("failed to render location"),
@@ -216,6 +223,7 @@ mod tests {
                 nameserver: "127.0.0.11".to_string(),
                 show_index: false,
                 is_file: true,
+                enable_sse: false,
             }
             .render()
             .expect("failed to render location"),
