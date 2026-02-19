@@ -526,6 +526,63 @@ mod tests {
                     ]),
                 },
             ),
+            // SSE test cases
+            (
+                "/events>http://backend:8000/?sse",
+                ParsedResult {
+                    target_dir: target_dir.clone(),
+                    basic_auth_map: HashSet::new(),
+                    server_map: HashMap::from_iter([(
+                        "*".to_string(),
+                        Server {
+                            config: &config,
+                            domain: None,
+                            port: None,
+                            locations: vec![Location {
+                                config: &config,
+                                location: "/events".to_string(),
+                                domain: Some("http://backend:8000".to_string()),
+                                alias: "/".to_string(),
+                                fallback: false,
+                                basic_auth: None,
+                                cache_type: CacheType::None,
+                                nameserver: "".to_string(),
+                                show_index: false,
+                                is_file: false,
+                                enable_sse: true,
+                            }],
+                        },
+                    )]),
+                },
+            ),
+            (
+                "/events?sse>http://backend:8000/",
+                ParsedResult {
+                    target_dir: target_dir.clone(),
+                    basic_auth_map: HashSet::new(),
+                    server_map: HashMap::from_iter([(
+                        "*".to_string(),
+                        Server {
+                            config: &config,
+                            domain: None,
+                            port: None,
+                            locations: vec![Location {
+                                config: &config,
+                                location: "/events".to_string(),
+                                domain: Some("http://backend:8000".to_string()),
+                                alias: "/".to_string(),
+                                fallback: false,
+                                basic_auth: None,
+                                cache_type: CacheType::None,
+                                nameserver: "".to_string(),
+                                show_index: false,
+                                is_file: false,
+                                enable_sse: true,
+                            }],
+                        },
+                    )]),
+                },
+            ),
         ] {
             let parsed_result = parse(&target_dir, conf_str, &config, "", &HashMap::new()).expect("parse failed");
             assert_eq!(parsed_result, expected);
