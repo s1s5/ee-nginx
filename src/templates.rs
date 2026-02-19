@@ -182,6 +182,40 @@ mod tests {
     }
 
     #[test]
+    fn test_location_sse() {
+        let config = Config { docker_mode: false };
+        assert_eq!(
+            Location {
+                config: &config,
+                location: "/events".to_string(),
+                domain: Some("http://backend:8000".to_string()),
+                alias: "/".to_string(),
+                fallback: false,
+                basic_auth: None,
+                cache_type: CacheType::None,
+                nameserver: "".to_string(),
+                show_index: false,
+                is_file: false,
+                enable_sse: true,
+            }
+            .render()
+            .expect("failed to render location"),
+            r#"  location /events {
+    proxy_pass http://backend:8000/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_redirect off;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_buffering off;
+    proxy_cache off;
+    chunked_transfer_encoding off;
+  }"#
+        );
+    }
+
+    #[test]
     fn test_location_file_0() {
         let config = Config { docker_mode: true };
         assert_eq!(
