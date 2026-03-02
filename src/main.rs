@@ -1,5 +1,6 @@
 use clap::Parser;
-use ee_nginx::{output, parse, Config};
+use ee_nginx::{parse, output, Config, CacheType, ParsedResult};
+use serde::Serialize;
 use std::{collections::HashMap, io::BufRead, net::IpAddr, path::PathBuf, str::FromStr};
 
 #[derive(Parser, Debug)]
@@ -16,6 +17,48 @@ struct Args {
 
     #[arg(short, long, default_value = "/etc/nginx/conf.d")]
     dst_dir: String,
+
+    /// Validate configuration only, do not output files
+    #[arg(long)]
+    validate: bool,
+
+    /// Enable verbose output for validation
+    #[arg(long)]
+    verbose: bool,
+
+    /// Output format: text, json, or yaml
+    #[arg(long, default_value = "text", value_enum)]
+    output_format: OutputFormat,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+enum OutputFormat {
+    #[default]
+    Text,
+    Json,
+    Yaml,
+}
+
+impl std::fmt::Display for OutputFormat {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OutputFormat::Text => write!(f, "text"),
+            OutputFormat::Json => write!(f, "json"),
+            OutputFormat::Yaml => write!(f, "yaml"),
+        }
+    }
+}
+
+impl std::str::FromStr for OutputFormat {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "text" => Ok(OutputFormat::Text),
+            "json" => Ok(OutputFormat::Json),
+            "yaml" => Ok(OutputFormat::Yaml),
+            _ => Err(format!("Unknown output format: {}", s)),
+        }
+    }
 }
 
 impl Args {
@@ -85,16 +128,160 @@ fn main() {
     let conf = args.get_output_conf();
     let nameserver = extract_nameserver_from_resolv_conf().unwrap_or("127.0.0.53".to_string());
     let hosts = extract_etc_hosts().unwrap_or_default();
-    let parsed_result = parse(
+    
+    let parse_result = parse(
         &PathBuf::from(&args.dst_dir),
         &args.get_nginx_conf(),
         &conf,
         &nameserver,
         &hosts,
-    )
-    .expect("parse failed");
+    );
 
-    output(&parsed_result).expect("output failed");
+    match parse_result {
+        Ok(parsed_result) => {
+            // Output format handling
+            match args.output_format {
+                OutputFormat::Json => {
+                    let output = OutputResult::from(&parsed_result);
+                    println!("{}", serde_json::to_string_pretty(&output).expect("failed to serialize to json"));
+                    return;
+                }
+                OutputFormat::Yaml => {
+                    let output = OutputResult::from(&parsed_result);
+                    println!("{}", serde_yaml::to_string(&output).expect("failed to serialize to yaml"));
+                    return;
+                }
+                OutputFormat::Text => {
+                    // Continue with normal flow
+                }
+            }
+            
+            if args.validate {
+                // Validation mode - print success message and details
+                let server_count = parsed_result.server_map.len();
+                let location_count: usize = parsed_result.server_map.values()
+                    .map(|s| s.locations.len())
+                    .sum();
+                
+                println!("✓ Valid configuration");
+                println!("✓ {} server block(s)", server_count);
+                println!("✓ {} location block(s)", location_count);
+                
+                if args.verbose {
+                    println!("\nServers:");
+                    for (domain, server) in &parsed_result.server_map {
+                        println!("  - {}:{}", domain, server.port.unwrap_or(80));
+                        for location in &server.locations {
+                            println!("    {} -> {}", location.location, location.domain.as_ref().unwrap_or(&"static".to_string()));
+                        }
+                    }
+                }
+            } else {
+                // Normal mode - output files
+                output(&parsed_result).expect("output failed");
+            }
+        }
+        Err(e) => {
+            if args.validate {
+                // Validation mode - print error message
+                eprintln!("✗ Invalid configuration");
+                eprintln!("✗ Error: {}", e);
+                std::process::exit(1);
+            } else {
+                // Normal mode - panic
+                panic!("parse failed: {}", e);
+            }
+        }
+    }
+}
+
+// Serializable output structure for JSON/YAML
+#[derive(Debug, Serialize)]
+struct OutputResult {
+    target_dir: String,
+    servers: Vec<ServerOutput>,
+}
+
+#[derive(Debug, Serialize)]
+struct ServerOutput {
+    domain: String,
+    port: Option<u16>,
+    locations: Vec<LocationOutput>,
+}
+
+#[derive(Debug, Serialize)]
+struct LocationOutput {
+    location: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    domain: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    alias: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    basic_auth: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    cache_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    nameserver: Option<String>,
+    #[serde(skip_serializing_if = "Not::is_false")]
+    fallback: bool,
+    #[serde(skip_serializing_if = "Not::is_false")]
+    show_index: bool,
+    #[serde(skip_serializing_if = "Not::is_false")]
+    is_file: bool,
+    #[serde(skip_serializing_if = "Not::is_false")]
+    enable_sse: bool,
+}
+
+trait Not {
+    fn is_false(&self) -> bool;
+}
+
+impl Not for bool {
+    fn is_false(&self) -> bool {
+        !*self
+    }
+}
+
+impl From<&ParsedResult<'_>> for OutputResult {
+    fn from(result: &ParsedResult<'_>) -> Self {
+        let servers: Vec<ServerOutput> = result.server_map
+            .iter()
+            .map(|(domain, server)| {
+                let locations: Vec<LocationOutput> = server.locations
+                    .iter()
+                    .map(|loc| {
+                        let cache_type = match loc.cache_type {
+                            CacheType::None => None,
+                            CacheType::MustRevalidate => Some("must-revalidate".to_string()),
+                            CacheType::Versioned => Some("versioned".to_string()),
+                        };
+                        LocationOutput {
+                            location: loc.location.clone(),
+                            domain: loc.domain.clone(),
+                            alias: if loc.alias != "/" { Some(loc.alias.clone()) } else { None },
+                            basic_auth: loc.basic_auth.clone(),
+                            cache_type,
+                            nameserver: Some(loc.nameserver.clone()),
+                            fallback: loc.fallback,
+                            show_index: loc.show_index,
+                            is_file: loc.is_file,
+                            enable_sse: loc.enable_sse,
+                        }
+                    })
+                    .collect();
+                ServerOutput {
+                    domain: domain.clone(),
+                    port: server.port,
+                    locations,
+                }
+            })
+            .collect();
+        
+        OutputResult {
+            target_dir: result.target_dir.to_string_lossy().to_string(),
+            servers,
+        }
+    }
 }
 
 #[cfg(test)]

@@ -22,7 +22,7 @@ pub enum CacheType {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ParsedResult<'a> {
-    target_dir: PathBuf,
-    basic_auth_map: HashSet<(String, String)>,
-    server_map: HashMap<String, Server<'a>>,
+    pub target_dir: PathBuf,
+    pub basic_auth_map: HashSet<(String, String)>,
+    pub server_map: HashMap<String, Server<'a>>,
 }
