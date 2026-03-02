@@ -277,7 +277,6 @@ mod tests {
         );
     }
 
-
     #[test]
     fn test_server_0() {
         let config = Config { docker_mode: false };

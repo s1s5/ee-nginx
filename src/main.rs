@@ -1,5 +1,5 @@
 use clap::Parser;
-use ee_nginx::{parse, output, Config as NginxConfig, CacheType, ParsedResult};
+use ee_nginx::{output, parse, CacheType, Config as NginxConfig, ParsedResult};
 use serde::Serialize;
 use std::{collections::HashMap, io::BufRead, net::IpAddr, path::PathBuf, str::FromStr};
 
@@ -75,21 +75,19 @@ impl Args {
             .ok()
             .unwrap_or("false".to_string())
             == "true";
-        NginxConfig {
-            docker_mode
-        }
+        NginxConfig { docker_mode }
     }
     fn get_nginx_conf(&self) -> String {
         // Check for environment-specific configuration
         let env = std::env::var("NGINX_ENV").unwrap_or_default();
-        
+
         if !env.is_empty() {
             let key = format!("NGINX_CONF_{}", env.to_uppercase());
             if let Ok(conf) = std::env::var(&key) {
                 return conf;
             }
         }
-        
+
         if let Some(conf_str) = &self.conf_str {
             conf_str.clone()
         } else if let Some(conf_file) = &self.conf_file {
@@ -146,13 +144,13 @@ fn main() {
     let conf = args.get_output_conf();
     let nameserver = extract_nameserver_from_resolv_conf().unwrap_or("127.0.0.53".to_string());
     let hosts = extract_etc_hosts().unwrap_or_default();
-    
+
     // If watch mode is enabled, enter watch loop
     if let Some(watch_path) = &args.watch {
         run_watch_mode(&args, watch_path, &conf, &nameserver, &hosts);
         return;
     }
-    
+
     // Normal single-run mode
     run_single(&args, &conf, &nameserver, &hosts);
 }
@@ -172,36 +170,48 @@ fn run_single(args: &Args, conf: &NginxConfig, nameserver: &str, hosts: &HashMap
             match args.output_format {
                 OutputFormat::Json => {
                     let output = OutputResult::from(&parsed_result);
-                    println!("{}", serde_json::to_string_pretty(&output).expect("failed to serialize to json"));
+                    println!(
+                        "{}",
+                        serde_json::to_string_pretty(&output).expect("failed to serialize to json")
+                    );
                     return;
                 }
                 OutputFormat::Yaml => {
                     let output = OutputResult::from(&parsed_result);
-                    println!("{}", serde_yaml::to_string(&output).expect("failed to serialize to yaml"));
+                    println!(
+                        "{}",
+                        serde_yaml::to_string(&output).expect("failed to serialize to yaml")
+                    );
                     return;
                 }
                 OutputFormat::Text => {
                     // Continue with normal flow
                 }
             }
-            
+
             if args.validate {
                 // Validation mode - print success message and details
                 let server_count = parsed_result.server_map.len();
-                let location_count: usize = parsed_result.server_map.values()
+                let location_count: usize = parsed_result
+                    .server_map
+                    .values()
                     .map(|s| s.locations.len())
                     .sum();
-                
+
                 println!("✓ Valid configuration");
                 println!("✓ {} server block(s)", server_count);
                 println!("✓ {} location block(s)", location_count);
-                
+
                 if args.verbose {
                     println!("\nServers:");
                     for (domain, server) in &parsed_result.server_map {
                         println!("  - {}:{}", domain, server.port.unwrap_or(80));
                         for location in &server.locations {
-                            println!("    {} -> {}", location.location, location.domain.as_ref().unwrap_or(&"static".to_string()));
+                            println!(
+                                "    {} -> {}",
+                                location.location,
+                                location.domain.as_ref().unwrap_or(&"static".to_string())
+                            );
                         }
                     }
                 }
@@ -224,13 +234,19 @@ fn run_single(args: &Args, conf: &NginxConfig, nameserver: &str, hosts: &HashMap
     }
 }
 
-fn run_watch_mode(args: &Args, watch_path: &str, conf: &NginxConfig, nameserver: &str, hosts: &HashMap<String, IpAddr>) {
+fn run_watch_mode(
+    args: &Args,
+    watch_path: &str,
+    conf: &NginxConfig,
+    nameserver: &str,
+    hosts: &HashMap<String, IpAddr>,
+) {
     use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
     use std::sync::mpsc::channel;
     use std::time::Duration;
-    
+
     let (tx, rx) = channel();
-    
+
     let mut watcher = RecommendedWatcher::new(
         move |res: Result<notify::Event, notify::Error>| {
             if let Ok(event) = res {
@@ -238,17 +254,19 @@ fn run_watch_mode(args: &Args, watch_path: &str, conf: &NginxConfig, nameserver:
             }
         },
         Config::default().with_poll_interval(Duration::from_secs(2)),
-    ).expect("Failed to create watcher");
-    
+    )
+    .expect("Failed to create watcher");
+
     let path_to_watch = PathBuf::from(watch_path);
-    watcher.watch(&path_to_watch, RecursiveMode::Recursive)
+    watcher
+        .watch(&path_to_watch, RecursiveMode::Recursive)
         .expect("Failed to watch path");
-    
+
     println!("Watching {} for changes...", watch_path);
-    
+
     // Initial run
     run_single(args, conf, nameserver, hosts);
-    
+
     loop {
         match rx.recv_timeout(Duration::from_secs(1)) {
             Ok(event) => {
@@ -313,10 +331,12 @@ impl Not for bool {
 
 impl From<&ParsedResult<'_>> for OutputResult {
     fn from(result: &ParsedResult<'_>) -> Self {
-        let servers: Vec<ServerOutput> = result.server_map
+        let servers: Vec<ServerOutput> = result
+            .server_map
             .iter()
             .map(|(domain, server)| {
-                let locations: Vec<LocationOutput> = server.locations
+                let locations: Vec<LocationOutput> = server
+                    .locations
                     .iter()
                     .map(|loc| {
                         let cache_type = match loc.cache_type {
@@ -327,7 +347,11 @@ impl From<&ParsedResult<'_>> for OutputResult {
                         LocationOutput {
                             location: loc.location.clone(),
                             domain: loc.domain.clone(),
-                            alias: if loc.alias != "/" { Some(loc.alias.clone()) } else { None },
+                            alias: if loc.alias != "/" {
+                                Some(loc.alias.clone())
+                            } else {
+                                None
+                            },
                             basic_auth: loc.basic_auth.clone(),
                             cache_type,
                             nameserver: Some(loc.nameserver.clone()),
@@ -345,7 +369,7 @@ impl From<&ParsedResult<'_>> for OutputResult {
                 }
             })
             .collect();
-        
+
         OutputResult {
             target_dir: result.target_dir.to_string_lossy().to_string(),
             servers,
