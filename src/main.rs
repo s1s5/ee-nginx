@@ -1,5 +1,5 @@
 use clap::Parser;
-use ee_nginx::{parse, output, Config, CacheType, ParsedResult};
+use ee_nginx::{parse, output, Config as NginxConfig, CacheType, ParsedResult};
 use serde::Serialize;
 use std::{collections::HashMap, io::BufRead, net::IpAddr, path::PathBuf, str::FromStr};
 
@@ -29,6 +29,14 @@ struct Args {
     /// Output format: text, json, or yaml
     #[arg(long, default_value = "text", value_enum)]
     output_format: OutputFormat,
+
+    /// Custom template directory (requires recompilation for changes)
+    #[arg(long)]
+    template_dir: Option<String>,
+
+    /// Watch for file changes and auto-regenerate
+    #[arg(short, long)]
+    watch: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -62,16 +70,26 @@ impl std::str::FromStr for OutputFormat {
 }
 
 impl Args {
-    fn get_output_conf(&self) -> Config {
+    fn get_output_conf(&self) -> NginxConfig {
         let docker_mode = std::env::var("NGINX_IN_DOCKER")
             .ok()
             .unwrap_or("false".to_string())
             == "true";
-        Config {
+        NginxConfig {
             docker_mode
         }
     }
     fn get_nginx_conf(&self) -> String {
+        // Check for environment-specific configuration
+        let env = std::env::var("NGINX_ENV").unwrap_or_default();
+        
+        if !env.is_empty() {
+            let key = format!("NGINX_CONF_{}", env.to_uppercase());
+            if let Ok(conf) = std::env::var(&key) {
+                return conf;
+            }
+        }
+        
         if let Some(conf_str) = &self.conf_str {
             conf_str.clone()
         } else if let Some(conf_file) = &self.conf_file {
@@ -129,12 +147,23 @@ fn main() {
     let nameserver = extract_nameserver_from_resolv_conf().unwrap_or("127.0.0.53".to_string());
     let hosts = extract_etc_hosts().unwrap_or_default();
     
+    // If watch mode is enabled, enter watch loop
+    if let Some(watch_path) = &args.watch {
+        run_watch_mode(&args, watch_path, &conf, &nameserver, &hosts);
+        return;
+    }
+    
+    // Normal single-run mode
+    run_single(&args, &conf, &nameserver, &hosts);
+}
+
+fn run_single(args: &Args, conf: &NginxConfig, nameserver: &str, hosts: &HashMap<String, IpAddr>) {
     let parse_result = parse(
         &PathBuf::from(&args.dst_dir),
         &args.get_nginx_conf(),
-        &conf,
-        &nameserver,
-        &hosts,
+        conf,
+        nameserver,
+        hosts,
     );
 
     match parse_result {
@@ -191,6 +220,46 @@ fn main() {
                 // Normal mode - panic
                 panic!("parse failed: {}", e);
             }
+        }
+    }
+}
+
+fn run_watch_mode(args: &Args, watch_path: &str, conf: &NginxConfig, nameserver: &str, hosts: &HashMap<String, IpAddr>) {
+    use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
+    use std::sync::mpsc::channel;
+    use std::time::Duration;
+    
+    let (tx, rx) = channel();
+    
+    let mut watcher = RecommendedWatcher::new(
+        move |res: Result<notify::Event, notify::Error>| {
+            if let Ok(event) = res {
+                let _ = tx.send(event);
+            }
+        },
+        Config::default().with_poll_interval(Duration::from_secs(2)),
+    ).expect("Failed to create watcher");
+    
+    let path_to_watch = PathBuf::from(watch_path);
+    watcher.watch(&path_to_watch, RecursiveMode::Recursive)
+        .expect("Failed to watch path");
+    
+    println!("Watching {} for changes...", watch_path);
+    
+    // Initial run
+    run_single(args, conf, nameserver, hosts);
+    
+    loop {
+        match rx.recv_timeout(Duration::from_secs(1)) {
+            Ok(event) => {
+                if event.kind.is_modify() || event.kind.is_create() {
+                    println!("\n--- File changed, regenerating ---");
+                    run_single(args, conf, nameserver, hosts);
+                    println!("--- Done ---\n");
+                }
+            }
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => continue,
+            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
         }
     }
 }
