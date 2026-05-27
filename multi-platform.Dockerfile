@@ -2,7 +2,7 @@
 ARG APP_NAME="ee-nginx"
 
 # ------------- build ----------------
-FROM --platform=$BUILDPLATFORM s1s5/musl:${TARGETARCH} as builder
+FROM --platform=$BUILDPLATFORM s1s5/musl:${TARGETARCH} AS builder
 
 RUN mkdir -p /home/rust/src
 WORKDIR /home/rust
@@ -32,10 +32,10 @@ ARG APP_NAME
 WORKDIR /app
 COPY --from=builder /home/rust/target/*-unknown-linux-musl/release/$APP_NAME ./generator
 
-ENV RUST_LOG info
-ENV NGINX_CONF "/>/usr/share/nginx/html/"
-ENV NGINX_CONF_FILE ""
-ENV NGINX_IN_DOCKER "true"
+ENV RUST_LOG=info \
+    NGINX_CONF="/>/usr/share/nginx/html/" \
+    NGINX_CONF_FILE="" \
+    NGINX_IN_DOCKER="true"
 
 WORKDIR /
 COPY entrypoint.sh /entrypoint.sh
