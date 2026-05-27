@@ -246,21 +246,6 @@ fn try_run_single(
     }
 }
 
-fn run_single(
-    args: &Args,
-    conf: &NginxConfig,
-    nameserver: &str,
-    hosts: &HashMap<String, IpAddr>,
-) {
-    if let Err(e) = try_run_single(args, conf, nameserver, hosts) {
-        if args.validate {
-            std::process::exit(1);
-        } else {
-            panic!("{}", e);
-        }
-    }
-}
-
 fn send_sighup() {
     let pid_path = "/var/run/nginx.pid";
     match std::fs::read_to_string(pid_path) {
