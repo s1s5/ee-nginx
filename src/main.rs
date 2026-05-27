@@ -34,9 +34,13 @@ struct Args {
     #[arg(long)]
     template_dir: Option<String>,
 
-    /// Watch for file changes and auto-regenerate
+    /// Watch for file changes and auto-generate
     #[arg(short, long)]
     watch: Option<String>,
+
+    /// Send SIGHUP to nginx after successful config regeneration (used with --watch)
+    #[arg(long)]
+    reload_nginx: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -152,10 +156,17 @@ fn main() {
     }
 
     // Normal single-run mode
-    run_single(&args, &conf, &nameserver, &hosts);
+    if let Err(e) = try_run_single(&args, &conf, &nameserver, &hosts) {
+        panic!("{}", e);
+    }
 }
 
-fn run_single(args: &Args, conf: &NginxConfig, nameserver: &str, hosts: &HashMap<String, IpAddr>) {
+fn try_run_single(
+    args: &Args,
+    conf: &NginxConfig,
+    nameserver: &str,
+    hosts: &HashMap<String, IpAddr>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let parse_result = parse(
         &PathBuf::from(&args.dst_dir),
         &args.get_nginx_conf(),
@@ -172,17 +183,19 @@ fn run_single(args: &Args, conf: &NginxConfig, nameserver: &str, hosts: &HashMap
                     let output = OutputResult::from(&parsed_result);
                     println!(
                         "{}",
-                        serde_json::to_string_pretty(&output).expect("failed to serialize to json")
+                        serde_json::to_string_pretty(&output)
+                            .map_err(|e| format!("failed to serialize to json: {}", e))?
                     );
-                    return;
+                    return Ok(());
                 }
                 OutputFormat::Yaml => {
                     let output = OutputResult::from(&parsed_result);
                     println!(
                         "{}",
-                        serde_yaml::to_string(&output).expect("failed to serialize to yaml")
+                        serde_yaml::to_string(&output)
+                            .map_err(|e| format!("failed to serialize to yaml: {}", e))?
                     );
-                    return;
+                    return Ok(());
                 }
                 OutputFormat::Text => {
                     // Continue with normal flow
@@ -217,19 +230,62 @@ fn run_single(args: &Args, conf: &NginxConfig, nameserver: &str, hosts: &HashMap
                 }
             } else {
                 // Normal mode - output files
-                output(&parsed_result).expect("output failed");
+                output(&parsed_result).map_err(|e| format!("output failed: {}", e))?;
             }
+            Ok(())
         }
         Err(e) => {
             if args.validate {
-                // Validation mode - print error message
                 eprintln!("✗ Invalid configuration");
                 eprintln!("✗ Error: {}", e);
-                std::process::exit(1);
+                Err(e.to_string().into())
             } else {
-                // Normal mode - panic
-                panic!("parse failed: {}", e);
+                Err(format!("parse failed: {}", e).into())
             }
+        }
+    }
+}
+
+fn run_single(
+    args: &Args,
+    conf: &NginxConfig,
+    nameserver: &str,
+    hosts: &HashMap<String, IpAddr>,
+) {
+    if let Err(e) = try_run_single(args, conf, nameserver, hosts) {
+        if args.validate {
+            std::process::exit(1);
+        } else {
+            panic!("{}", e);
+        }
+    }
+}
+
+fn send_sighup() {
+    let pid_path = "/var/run/nginx.pid";
+    match std::fs::read_to_string(pid_path) {
+        Ok(pid_str) => {
+            let pid = pid_str.trim();
+            let status = std::process::Command::new("kill")
+                .args(["-s", "HUP", pid])
+                .status();
+            match status {
+                Ok(s) if s.success() => {
+                    println!("  Reloaded nginx (PID {})", pid);
+                }
+                Ok(s) => {
+                    eprintln!("  kill failed with exit code: {:?}", s.code());
+                }
+                Err(e) => {
+                    eprintln!("  Failed to execute kill: {}", e);
+                }
+            }
+        }
+        Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => {
+            println!("  nginx.pid not found, skipping reload");
+        }
+        Err(e) => {
+            eprintln!("  Failed to read nginx.pid: {}", e);
         }
     }
 }
@@ -265,14 +321,32 @@ fn run_watch_mode(
     println!("Watching {} for changes...", watch_path);
 
     // Initial run
-    run_single(args, conf, nameserver, hosts);
+    match try_run_single(args, conf, nameserver, hosts) {
+        Ok(()) => {
+            if args.reload_nginx {
+                send_sighup();
+            }
+        }
+        Err(e) => {
+            eprintln!("Error: {}", e);
+        }
+    }
 
     loop {
         match rx.recv_timeout(Duration::from_secs(1)) {
             Ok(event) => {
                 if event.kind.is_modify() || event.kind.is_create() {
                     println!("\n--- File changed, regenerating ---");
-                    run_single(args, conf, nameserver, hosts);
+                    match try_run_single(args, conf, nameserver, hosts) {
+                        Ok(()) => {
+                            if args.reload_nginx {
+                                send_sighup();
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("Error regenerating config: {}", e);
+                        }
+                    }
                     println!("--- Done ---\n");
                 }
             }

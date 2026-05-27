@@ -38,10 +38,7 @@ ENV NGINX_CONF_FILE ""
 ENV NGINX_IN_DOCKER "true"
 
 WORKDIR /
-RUN echo $'#!bin/sh\n\
-    if [ $NGINX_CONF_FILE"" = "" ]; then /app/generator; \n\
-    else /app/generator --conf-file $NGINX_CONF_FILE; fi\n\
-    exec /docker-entrypoint.sh "$@"' > /entrypoint.sh
+COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 ENTRYPOINT [ "/entrypoint.sh" ]
