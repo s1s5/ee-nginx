@@ -23,6 +23,23 @@ services:
         http://hoge.localhost/static > /mnt/static/?must-revalidate  # cached, always check modification
 ```
 
+### with auto-reload (config file + watch)
+
+Set `NGINX_AUTO_RELOAD=true` with `NGINX_CONF_FILE` to watch the config file and automatically regenerate nginx config + reload nginx when the file changes.
+
+```yaml
+services:
+  nginx:
+    build: .
+    environment:
+      NGINX_CONF_FILE: /config/routes.txt
+      NGINX_AUTO_RELOAD: "true"
+    volumes:
+      - ./config:/config   # 編集→自動でnginx reload
+    ports:
+      - 80:80
+```
+
 ## Run Example
 ```shell
 $ cd example
@@ -42,6 +59,7 @@ ee-nginx [OPTIONS]
       --output-format <FORMAT>   Output format: text, json, or yaml (default: text)
       --template-dir <DIR>        Custom template directory
   -w, --watch <PATH>             Watch for file changes and auto-regenerate
+      --reload-nginx             Send SIGHUP to nginx after regeneration (use with --watch)
 ```
 
 ### --validate
