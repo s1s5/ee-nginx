@@ -193,5 +193,19 @@ try_files $uri $uri/ / =404;
 ```
 
 
-# development
-- docker buildx build --platform linux/amd64,linux/arm64 -f multi-platform.Dockerfile -t s1s5/ee-nginx .
+## Build
+
+### Multi-platform (amd64 + arm64)
+```bash
+docker buildx build --platform linux/amd64,linux/arm64 -f multi-platform.Dockerfile -t s1s5/ee-nginx .
+```
+
+### Single platform (amd64 only)
+```bash
+docker build -f Dockerfile -t s1s5/ee-nginx .
+```
+
+### Publish to Docker Hub
+```bash
+docker buildx build --platform linux/amd64,linux/arm64 -f multi-platform.Dockerfile -t s1s5/ee-nginx --push .
+```

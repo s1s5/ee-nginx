@@ -2,7 +2,7 @@
 ARG APP_NAME="ee-nginx"
 
 # ------------- build ----------------
-FROM messense/rust-musl-cross:x86_64-musl AS builder
+FROM ghcr.io/rust-cross/rust-musl-cross:x86_64-musl AS builder
 
 RUN mkdir -p /home/rust/src
 WORKDIR /home/rust
@@ -25,7 +25,7 @@ COPY ./templates/ ./templates/
 RUN cargo build --release --bin ${APP_NAME}
 
 # ------------- runtime ----------------
-FROM nginx:1.23.4-alpine
+FROM nginx:stable-alpine
 
 ARG APP_NAME
 
