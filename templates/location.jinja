@@ -4,10 +4,12 @@
     rewrite ^{{ location }}(.*)$ {{ alias }}$1 break;
     proxy_pass $target$uri$is_args$args;
     {% else %}set $target "{{ domain }}{{ alias }}";
-    rewrite {{ location }}(.*) /$1 break;
-    {% if alias.ends_with("/") %}proxy_pass $target$1$is_args$args;
-    {% else %}proxy_pass $target{{ location }}$1$is_args$args;
-    {% endif %}{% endif %}{% else %}proxy_pass {{ domain }}{{ alias }};
+    set $suffix $request_uri;
+    if ($request_uri ~ ^{{ location }}([^?]*)) {
+        set $suffix $1;
+    }
+    proxy_pass $target$suffix$is_args$args;
+    {% endif %}{% else %}proxy_pass {{ domain }}{{ alias }};
     {% endif %}proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_redirect off;
